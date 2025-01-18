@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section id="home" class="py-5">
+    <div class="container text-center">
+        <img src="{{ url_for('static', filename='img/foto.jpg') }}" alt="Sua Foto" class="img-fluid rounded-circle mb-3" style="max-width: 200px;">
+        <h1 class="display-4">Iago Filgueiras Chiapetta</h1>
+        <p class="lead">Desenvolvedor Full Stack | Especialista em Python e Linux | Cursando Ciências da Computação em Unifeso</p>
+    </div>
+</section>
+
+<section id="about" class="py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-4">Sobre Mim</h2>
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <p class="text-muted">Sou um programador full stack apaixonado por criar soluções inovadoras. Trabalho como analista de sistema na UNIFESO e nas horas vagas como programador Python freelancer.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="skills" class="py-5">
+    <div class="container">
+        <h2 class="text-center mb-4">Minhas Habilidades</h2>
+        <div class="row">
+            {% for skill in skills %}
+                <div class="col-6 col-md-4 col-lg-3 mb-3">
+                    <div class="bg-dark text-white p-3 rounded text-center">{{ skill }}</div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<section id="projects" class="py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-4">Projetos Destacados</h2>
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Meu Tesouro</h5>
+                        <p class="card-text">Sistema desenvolvido usando Python e Flask.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Portfólio Pessoal</h5>
+                        <p class="card-text">Site desenvolvido com WordPress.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Blog Recente -->
+<section id="blog" class="py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-4">Blog Recente</h2>
+        <div class="row">
+            {% for post in recent_posts %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ post['title'] }}</h5>
+                            <p class="card-text">{{ post['content'][:100] }}...</p>
+                            <a href="{{ url_for('post', post_id=post['id']) }}" class="btn btn-primary">Ler mais</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<script>
+    var url = 'https://cdn.waplus.io/waplus-crm/settings/ossembed.js';
+    var s = document.createElement('script');
+    s.type = 'text/javascript';
+    s.async = true;
+    s.src = url;
+    var options = {
+    "enabled": true,
+    "chatButtonSetting": {
+    "backgroundColor": "#16BE45",
+    "ctaText": "Entre em Contato",
+    "borderRadius": "8",
+    "marginLeft": "20",
+    "marginBottom": "20",
+    "marginRight": "20",
+    "position": "right",
+    "textColor": "#ffffff",
+    "phoneNumber": "+55 21 97294-0130",
+    "messageText": "Olá, preciso dos seus serviços!",
+    "trackClick": true
+    }
+    }
+    s.onload = function() {
+    CreateWhatsappBtn(options);
+    };
+    var x = document.getElementsByTagName('script')[0];
+    x.parentNode.insertBefore(s, x);
+    </script>
+
+
+{% endblock %}
