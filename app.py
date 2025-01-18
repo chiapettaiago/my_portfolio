@@ -44,7 +44,7 @@ def get_recent_posts():
 def home():
     skills = [
         "Python", "Flask", "HTML", "CSS", "JavaScript",
-        "SQL", "Git", "Linux", "Desenvolvimento Web"
+        "SQL", "Git", "Linux", "Desenvolvimento Web", "Manutenção de Computadores"
     ]
     recent_posts = get_recent_posts()
     return render_template('index.html', skills=skills, recent_posts=recent_posts)
