@@ -3,10 +3,11 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+import pymysql
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'sua_chave_secreta'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://casaos:casaos@191.252.223.140/portfolio'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://casaos:casaos@191.252.223.140/portfolio'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
