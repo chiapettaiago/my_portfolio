@@ -48,7 +48,7 @@ def home():
         "SQL", "Git", "Linux", "Desenvolvimento Web", "Manutenção de Computadores"
     ]
     recent_posts = get_recent_posts()
-    return render_template('index.html', skills=skills, recent_posts=recent_posts)
+    return render_template('index.html', skills=skills, recent_posts=recent_posts, current_user=current_user)
 
 @app.route('/post/<int:post_id>')
 def post(post_id):
