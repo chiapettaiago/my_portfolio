@@ -71,7 +71,7 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <h5 class="card-title">{{ post['title'] }}</h5>
-                            <p class="card-text">{{ post['content'][:100] }}...</p>
+                            <p class="card-text">{{ post['content'][:100] | safe }}...</p>
                             <a href="{{ url_for('post', post_id=post['id']) }}" class="btn btn-primary">Ler mais</a>
                         </div>
                     </div>
