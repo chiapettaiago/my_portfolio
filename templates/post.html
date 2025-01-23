@@ -10,6 +10,40 @@
             <div class="card mb-4">
                 <div class="card-body">
                     <h1 class="card-title">{{ post['title'] }}</h1>
+                    <!-- Botão de Compartilhar -->
+            <div class="mt-4">
+    <h5>Compartilhe este post:</h5>
+    <div class="d-flex">
+        <!-- Facebook -->
+        <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.url }}" 
+           target="_blank" 
+           class="btn btn-primary me-2">
+           <i class="fa-brands fa-facebook-f"></i> Facebook
+        </a>
+
+        <!-- Twitter -->
+        <a href="https://twitter.com/intent/tweet?url={{ request.url }}&text={{ post['title'] }}" 
+           target="_blank" 
+           class="btn btn-info text-white me-2">
+           <i class="fa-brands fa-twitter"></i> Twitter
+        </a>
+
+        <!-- WhatsApp -->
+        <a href="https://api.whatsapp.com/send?text={{ post['title'] }} - {{ request.url }}" 
+           target="_blank" 
+           class="btn btn-success me-2">
+           <i class="fa-brands fa-whatsapp"></i> WhatsApp
+        </a>
+
+        <!-- LinkedIn -->
+        <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ request.url }}&title={{ post['title'] }}" 
+           target="_blank" 
+           class="btn btn-secondary">
+           <i class="fa-brands fa-linkedin-in"></i> LinkedIn
+        </a>
+    </div>
+</div>
+
                     <p class="text-muted">Publicado em: {{ post['created_at'] }} por {{user.username}}</p>
                     <p class="card-text">{{ post['content'] | safe }}</p>
                 </div>
