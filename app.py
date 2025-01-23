@@ -19,11 +19,22 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
 
+class Comment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user = db.relationship('User', backref='comments', lazy=True)  # Relacionamento com User
+
+
+# Relacionamento no modelo Post
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    comments = db.relationship('Comment', backref='post', lazy=True)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -53,14 +64,19 @@ def home():
 @app.route('/post/<int:post_id>')
 def post(post_id):
     post = Post.query.get_or_404(post_id)
+    comments = Comment.query.filter_by(post_id=post.id).order_by(Comment.created_at.desc()).all()
+    
     post_dict = {
         'id': post.id,
         'title': post.title,
         'content': post.content,
         'created_at': post.created_at.strftime('%d/%m/%Y %H:%M')
     }
+
     recent_posts = get_recent_posts()
-    return render_template('post.html', post=post_dict, recent_posts=recent_posts)
+    
+    return render_template('post.html', post=post_dict, recent_posts=recent_posts, comments=comments, user=current_user)
+
 
 @app.route('/create', methods=['GET', 'POST'])
 @login_required
@@ -110,6 +126,23 @@ def login():
         else:
             flash('Credenciais inválidas.', 'danger')
     return render_template('login.html')
+
+@app.route('/post/<int:post_id>/comment', methods=['POST'])
+@login_required
+def add_comment(post_id):
+    content = request.form.get('content')
+    
+    if not content:
+        flash('O comentário não pode estar vazio.', 'danger')
+        return redirect(url_for('post', post_id=post_id))
+    
+    comment = Comment(post_id=post_id, user_id=current_user.id, content=content)
+    db.session.add(comment)
+    db.session.commit()
+    
+    flash('Comentário adicionado com sucesso!', 'success')
+    return redirect(url_for('post', post_id=post_id))
+
 
 @app.route('/logout')
 @login_required

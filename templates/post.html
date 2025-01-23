@@ -3,14 +3,59 @@
 {% block title %}{{ post['title'] }}{% endblock %}
 
 {% block content %}
-<section class="py-5">
-    <div class="container">
-        <h1 class="mb-4">{{ post['title'] }}</h1>
-        <p class="text-muted">Publicado em: {{ post['created_at'] }}</p>
-        <div class="mt-4">
-            <p>{{ post['content'] | safe }}</p>
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <!-- Post -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h1 class="card-title">{{ post['title'] }}</h1>
+                    <p class="text-muted">Publicado em: {{ post['created_at'] }}</p>
+                    <p class="card-text">{{ post['content'] | safe }}</p>
+                </div>
+            </div>
+
+            <!-- Seção de Comentários -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4>Comentários</h4>
+                </div>
+                <div class="card-body">
+                    {% if comments %}
+                        <ul class="list-group list-group-flush">
+                            {% for comment in comments %}
+                            <li class="list-group-item">
+                                <strong>{{ comment.user.username }}</strong>
+                                <span class="text-muted small">em {{ comment.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                                <p>{{ comment.content }}</p>
+                            </li>                            
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted">Nenhum comentário ainda. Seja o primeiro a comentar!</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Formulário de Comentário -->
+            {% if current_user.is_authenticated %}
+            <div class="card mb-4">
+                <div class="card-header bg-secondary text-white">
+                    Adicionar Comentário
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('add_comment', post_id=post['id']) }}" method="POST">
+                        <div class="mb-3">
+                            <textarea name="content" rows="3" class="form-control" placeholder="Escreva seu comentário..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Enviar</button>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <p><a href="{{ url_for('login') }}">Faça login</a> para comentar.</p>
+            {% endif %}
         </div>
-        <a href="{{ url_for('home') }}" class="btn btn-primary mt-4">Voltar para a página inicial</a>
     </div>
-</section>
+</div>
 {% endblock %}
