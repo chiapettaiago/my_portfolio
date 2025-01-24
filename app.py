@@ -122,7 +122,7 @@ def login():
         if user and check_password_hash(user.password, password):
             login_user(user)
             flash('Login realizado com sucesso!', 'success')
-            return redirect(url_for('create'))
+            return redirect(url_for('all_posts'))
         else:
             flash('Credenciais inválidas.', 'danger')
     return render_template('login.html')
@@ -142,6 +142,40 @@ def add_comment(post_id):
     
     flash('Comentário adicionado com sucesso!', 'success')
     return redirect(url_for('post', post_id=post_id))
+
+@app.route('/posts')
+@login_required
+def all_posts():
+    posts = Post.query.order_by(Post.created_at.desc()).all()
+    return render_template('all_posts.html', posts=posts)
+
+@app.route('/post/<int:post_id>/delete', methods=['POST'])
+@login_required
+def delete_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    if post:
+        db.session.delete(post)
+        db.session.commit()
+        flash('Post excluído com sucesso!', 'success')
+    return redirect(url_for('all_posts'))
+
+@app.route('/post/<int:post_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    if request.method == 'POST':
+        title = request.form['title']
+        content = request.form['content']
+        if not title or not content:
+            flash('Título e conteúdo são obrigatórios!', 'danger')
+            return redirect(url_for('edit_post', post_id=post.id))
+        post.title = title
+        post.content = content
+        db.session.commit()
+        flash('Post atualizado com sucesso!', 'success')
+        return redirect(url_for('all_posts'))
+    return render_template('edit_post.html', post=post)
+
 
 
 @app.route('/logout')
