@@ -47,3 +47,11 @@ section {
 #blog .card-footer {
     background-color: rgba(0, 0, 0, 0.03);
 }
+
+[data-embed-id="c89177f2-e08b-48f1-9ab1-a13fbc9cd001"] {
+    max-width: 100%;
+    max-height: 400px;
+    width: 400px;
+    height: 600px;
+}
+
