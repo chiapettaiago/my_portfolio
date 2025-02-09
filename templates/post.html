@@ -80,7 +80,8 @@
                 </div>
             </div>
             {% else %}
-            <p><a href="{{ url_for('login') }}">Faça login</a> para comentar.</p>
+            <p>Faça <a href="{{ url_for('login') }}">login</a> ou 
+                <a href="{{ url_for('register') }}">registre-se</a> para comentar.</p>
             {% endif %}
         </div>
     </div>

@@ -1,6 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from functools import wraps
+from flask import Flask, render_template, request, redirect, url_for, flash, abort
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user, AnonymousUserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import pymysql
@@ -18,6 +19,8 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(20), default='user')  # Novo campo
+
 
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -39,6 +42,18 @@ class Post(db.Model):
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != 'admin':
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
+
+class AnonymousUser(AnonymousUserMixin):
+    role = 'user'  # Ou None/outro valor padrão
+
 
 def get_recent_posts():
     posts = Post.query.order_by(Post.created_at.desc()).limit(3).all()
@@ -79,7 +94,7 @@ def post(post_id):
 
 
 @app.route('/create', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def create():
     if request.method == 'POST':
         title = request.form['title']
@@ -96,13 +111,12 @@ def create():
     return render_template('create.html', recent_posts=recent_posts)
 
 @app.route('/register', methods=['GET', 'POST'])
-@login_required
 def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         hashed_password = generate_password_hash(password)
-        new_user = User(username=username, password=hashed_password)
+        new_user = User(username=username, password=hashed_password, role='user')
         try:
             db.session.add(new_user)
             db.session.commit()
@@ -119,13 +133,22 @@ def login():
         username = request.form['username']
         password = request.form['password']
         user = User.query.filter_by(username=username).first()
+        
         if user and check_password_hash(user.password, password):
-            login_user(user)
-            flash('Login realizado com sucesso!', 'success')
-            return redirect(url_for('all_posts'))
+            login_user(user)  # Autentica o usuário antes de verificar a role
+            
+            # Verificação de role após login
+            if user.role == 'admin':  # Corrigido: usar user.role em vez de current_user
+                flash('Login admin realizado com sucesso!', 'success')
+                return redirect(url_for('all_posts'))
+            else:
+                flash('Login de usuário realizado!', 'success')
+                return redirect(url_for('home'))
         else:
-            flash('Credenciais inválidas.', 'danger')
+            flash('Combinação usuário/senha incorreta', 'danger')
+    
     return render_template('login.html')
+
 
 @app.route('/post/<int:post_id>/comment', methods=['POST'])
 @login_required
@@ -144,13 +167,13 @@ def add_comment(post_id):
     return redirect(url_for('post', post_id=post_id))
 
 @app.route('/posts')
-@login_required
+@admin_required
 def all_posts():
     posts = Post.query.order_by(Post.created_at.desc()).all()
     return render_template('all_posts.html', posts=posts)
 
 @app.route('/post/<int:post_id>/delete', methods=['POST'])
-@login_required
+@admin_required
 def delete_post(post_id):
     post = Post.query.get_or_404(post_id)
     if post:
@@ -160,7 +183,7 @@ def delete_post(post_id):
     return redirect(url_for('all_posts'))
 
 @app.route('/post/<int:post_id>/edit', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def edit_post(post_id):
     post = Post.query.get_or_404(post_id)
     if request.method == 'POST':
