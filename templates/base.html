@@ -27,10 +27,11 @@
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}#projects">Projetos</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}#blog">Blog</a></li>
                     {% if current_user.is_authenticated %}
+                    {% if current_user.role == 'admin' %}
                     <li class="nav-item" title="Usuário"><a class="nav-link" href="{{ url_for('all_posts') }}"><i class="fa-regular fa-user"></i></a></li>
-                    <li class="nav-item" title="Logout"><a class="nav-link" href="{{ url_for('logout') }}"><i class="fa-solid fa-arrow-right-from-bracket"></i></a></li>
                     <li class="nav-item" title="Criar Novo Post"><a class="nav-link" href="{{ url_for('create') }}"><i class="fa-solid fa-plus"></i></a></li>
-
+                    {% endif %}
+                    <li class="nav-item" title="Logout"><a class="nav-link" href="{{ url_for('logout') }}"><i class="fa-solid fa-arrow-right-from-bracket"></i></a></li>
                     {% else %}
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
                     {% endif %}
