@@ -3,7 +3,8 @@ from flask import Flask, render_template, request, redirect, url_for, flash, abo
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user, AnonymousUserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+import pytz
+from datetime import datetime, timezone
 import pymysql
 
 app = Flask(__name__)
@@ -31,13 +32,15 @@ class Comment(db.Model):
     user = db.relationship('User', backref='comments', lazy=True)  # Relacionamento com User
 
 
-# Relacionamento no modelo Post
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(pytz.timezone('America/Sao_Paulo')))
+    scheduled_for = db.Column(db.DateTime, nullable=True)
+    is_published = db.Column(db.Boolean, default=False)
     comments = db.relationship('Comment', backref='post', lazy=True)
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -54,18 +57,45 @@ def admin_required(f):
 class AnonymousUser(AnonymousUserMixin):
     role = 'user'  # Ou None/outro valor padrão
 
-
 def get_recent_posts():
-    posts = Post.query.order_by(Post.created_at.desc()).limit(3).all()
-    return [
-        {
-            'id': post.id,
-            'title': post.title,
-            'content': post.content,
-            'created_at': post.created_at.strftime('%d/%m/%Y %H:%M')
-        }
-        for post in posts
-    ]
+    fuso_sp = pytz.timezone('America/Sao_Paulo')
+    current_time = datetime.now(fuso_sp)
+    
+    posts = Post.query.filter(
+        db.or_(
+            Post.is_published == True,
+            db.and_(
+                Post.scheduled_for.isnot(None),
+                Post.scheduled_for <= current_time
+            )
+        )
+    ).order_by(Post.created_at.desc()).limit(3).all()
+    
+    return [{
+        'id': post.id,
+        'title': post.title,
+        'content': post.content,
+        'created_at': post.created_at.astimezone(fuso_sp).strftime('%d/%m/%Y %H:%M')
+    } for post in posts]
+
+
+    
+    
+def publish_scheduled_posts():
+    with app.app_context():
+        fuso_sp = pytz.timezone('America/Sao_Paulo')
+        current_time = datetime.now(fuso_sp)
+        
+        scheduled_posts = Post.query.filter(
+            Post.is_published == False,
+            Post.scheduled_for <= current_time
+        ).all()
+
+        for post in scheduled_posts:
+            post.is_published = True
+        
+        db.session.commit()
+
 
 @app.route('/')
 def home():
@@ -99,16 +129,41 @@ def create():
     if request.method == 'POST':
         title = request.form['title']
         content = request.form['content']
+        scheduled_date = request.form.get('scheduled_date')
+        scheduled_time = request.form.get('scheduled_time')
+        
+        fuso_sp = pytz.timezone('America/Sao_Paulo')
+
         if not title or not content:
             flash('Título e conteúdo são obrigatórios!', 'danger')
             return redirect(url_for('create'))
-        new_post = Post(title=title, content=content)
+
+        new_post = Post(
+            title=title,
+            content=content,
+            is_published=False
+        )
+
+        if scheduled_date and scheduled_time:
+            try:
+                scheduled_datetime = datetime.strptime(
+                    f"{scheduled_date} {scheduled_time}",
+                    "%Y-%m-%d %H:%M"
+                )
+                # Localiza o horário em São Paulo
+                scheduled_datetime = fuso_sp.localize(scheduled_datetime)
+                new_post.scheduled_for = scheduled_datetime
+            except ValueError:
+                flash('Data ou hora inválida!', 'danger')
+                return redirect(url_for('create'))
+
         db.session.add(new_post)
         db.session.commit()
-        flash('Post criado com sucesso!', 'success')
-        return redirect(url_for('home'))
-    recent_posts = get_recent_posts()
-    return render_template('create.html', recent_posts=recent_posts)
+        flash('Post agendado com sucesso!', 'success')
+        return redirect(url_for('all_posts'))
+
+    return render_template('create.html')
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -186,19 +241,43 @@ def delete_post(post_id):
 @admin_required
 def edit_post(post_id):
     post = Post.query.get_or_404(post_id)
+    fuso_sp = pytz.timezone('America/Sao_Paulo')
+    
     if request.method == 'POST':
         title = request.form['title']
         content = request.form['content']
+        scheduled_date = request.form.get('scheduled_date')
+        scheduled_time = request.form.get('scheduled_time')
+
         if not title or not content:
             flash('Título e conteúdo são obrigatórios!', 'danger')
             return redirect(url_for('edit_post', post_id=post.id))
+
         post.title = title
         post.content = content
+        
+        if scheduled_date and scheduled_time:
+            try:
+                scheduled_datetime = datetime.strptime(
+                    f"{scheduled_date} {scheduled_time}",
+                    "%Y-%m-%d %H:%M"
+                )
+                # Localiza o horário em São Paulo
+                scheduled_datetime = fuso_sp.localize(scheduled_datetime)
+                post.scheduled_for = scheduled_datetime
+                post.is_published = False
+            except ValueError:
+                flash('Data ou hora inválida!', 'danger')
+                return redirect(url_for('edit_post', post_id=post.id))
+        else:
+            post.scheduled_for = None
+            post.is_published = True
+
         db.session.commit()
         flash('Post atualizado com sucesso!', 'success')
         return redirect(url_for('all_posts'))
-    return render_template('edit_post.html', post=post)
 
+    return render_template('edit_post.html', post=post)
 
 
 @app.route('/logout')
