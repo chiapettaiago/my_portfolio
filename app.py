@@ -115,7 +115,8 @@ def post(post_id):
         'id': post.id,
         'title': post.title,
         'content': post.content,
-        'created_at': post.created_at.strftime('%d/%m/%Y %H:%M')
+        'created_at': post.created_at.strftime('%d/%m/%Y %H:%M'),
+        'scheduled_for': post.scheduled_for.strftime('%d/%m/%Y %H:%M')
     }
 
     recent_posts = get_recent_posts()
