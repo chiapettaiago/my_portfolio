@@ -40,6 +40,8 @@ class Post(db.Model):
     scheduled_for = db.Column(db.DateTime, nullable=True)
     is_published = db.Column(db.Boolean, default=False)
     comments = db.relationship('Comment', backref='post', lazy=True)
+    user = db.relationship('User', backref='posts')
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 
 @login_manager.user_loader
@@ -116,7 +118,8 @@ def post(post_id):
         'title': post.title,
         'content': post.content,
         'created_at': post.created_at.strftime('%d/%m/%Y %H:%M'),
-        'scheduled_for': post.scheduled_for.strftime('%d/%m/%Y %H:%M')
+        'scheduled_for': post.scheduled_for.strftime('%d/%m/%Y %H:%M'),
+        'user': post.user.username
     }
 
     recent_posts = get_recent_posts()
@@ -142,7 +145,8 @@ def create():
         new_post = Post(
             title=title,
             content=content,
-            is_published=False
+            is_published=False,
+            user_id=current_user.id
         )
 
         if scheduled_date and scheduled_time:

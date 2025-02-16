@@ -37,7 +37,7 @@
     </div>
 </div>
 
-                    <p class="text-muted">Publicado em: {{ post['scheduled_for'] }} por {{user.username}}</p>
+                    <p class="text-muted">Publicado em: {{ post['scheduled_for'] }} por {{post['user']}}</p>
                     <p class="card-text">{{ post['content'] | safe }}</p>
                 </div>
             </div>
