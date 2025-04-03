@@ -1,18 +1,22 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4 mb-4 text-center">
-    <h2>Login</h2>
-    <form method="post">
-        <div class="mb-3">
-            <label for="username" class="form-label">Usuário</label>
-            <input type="text" class="form-control" id="username" name="username" required>
-        </div>
-        <div class="mb-3">
-            <label for="password" class="form-label">Senha</label>
-            <input type="password" class="form-control" id="password" name="password" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Entrar</button>
-    </form>
+<div class="container d-flex justify-content-center align-items-center" style="min-height: calc(100vh - 120px);">
+  <div class="card shadow" style="width: 30rem;">
+    <div class="card-body">
+      <h2 class="card-title text-center mb-4">Login</h2>
+      <form method="post">
+          <div class="mb-3">
+              <label for="username" class="form-label">Usuário</label>
+              <input type="text" class="form-control" id="username" name="username" required>
+          </div>
+          <div class="mb-3">
+              <label for="password" class="form-label">Senha</label>
+              <input type="password" class="form-control" id="password" name="password" required>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Entrar</button>
+      </form>
+    </div>
+  </div>
 </div>
 {% endblock %}
