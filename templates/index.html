@@ -56,8 +56,6 @@
     </div>
 </section>
 
-
-
 <section id="skills" class="py-5">
     <div class="container">
         <h2 class="text-center mb-4">Minhas Habilidades</h2>
@@ -80,7 +78,7 @@
                     <a href="https://meutesouro.site" target="_blank" class="card">
                     <div class="card-body">
                         <h5 class="card-title text-center">Meu Tesouro</h5>
-                        <p class="card-text text-center">Sistema financeiro que gerencia suas finanças de forma inteligente. Clique aqui e acesse agora mesmo..</p>
+                        <p class="card-text text-center">Sistema financeiro que gerencia suas finanças de forma inteligente. Clique aqui e acesse agora mesmo.</p>
                     </div>
                 </a>
                 </div>
@@ -110,7 +108,7 @@
                         <div class="card-body">
                             <h5 class="card-title">{{ post['title'] }}</h5>
                             {% if post['main_image'] %}
-                                <img src="{{ post['main_image'] }}" class="img-fluid rounded mb-3" alt="Imagem principal do post">
+                                <img src="{{ url_for('static', filename='uploads/' ~ post['main_image']) }}" class="img-fluid rounded mb-3" alt="Imagem principal do post">
                             {% endif %}
 
                             <p class="card-text">{{ post['content'][:100] | safe }}...</p>
@@ -122,6 +120,5 @@
         </div>
     </div>
 </section>
-
 
 {% endblock %}
