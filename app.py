@@ -1,40 +1,44 @@
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, flash, abort, Response, render_template_string
+from flask import Flask, render_template, request, redirect, url_for, flash, abort, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user, AnonymousUserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-import pytz
-from datetime import datetime, timezone
-import pymysql
-import os
 from werkzeug.utils import secure_filename
+import pytz
+from datetime import datetime
+import os
+import pymysql
 
-UPLOAD_FOLDER = 'static/uploads'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
-
+# Configurações iniciais
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'sua_chave_secreta'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://portfolio:8MEPBTxaaZRaKxs8@191.252.100.132/portfolio'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-# Cria a pasta se não existir
+# Pasta de upload e limites
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# Extensões
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+# Modelos
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(20), default='user')  # Novo campo
-
+    role = db.Column(db.String(20), default='user')
 
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -42,8 +46,7 @@ class Comment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    user = db.relationship('User', backref='comments', lazy=True)  # Relacionamento com User
-
+    user = db.relationship('User', backref='comments', lazy=True)
 
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -52,207 +55,59 @@ class Post(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(pytz.timezone('America/Sao_Paulo')))
     scheduled_for = db.Column(db.DateTime, nullable=True)
     is_published = db.Column(db.Boolean, default=False)
-    main_image = db.Column(db.String(255))  # <-- Adiciona esse campo aqui
+    main_image = db.Column(db.String(255))  # agora armazena o nome do arquivo
     comments = db.relationship('Comment', backref='post', lazy=True)
     user = db.relationship('User', backref='posts')
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    
-    def get_link(self):
-        return f"https://chiapettadev.site/posts/{self.slug}"
-
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+class AnonymousUser(AnonymousUserMixin):
+    role = 'user'
+
 def admin_required(f):
     @wraps(f)
-    def decorated_function(*args, **kwargs):
+    def decorated(*args, **kwargs):
         if not current_user.is_authenticated or current_user.role != 'admin':
             abort(403)
         return f(*args, **kwargs)
-    return decorated_function
+    return decorated
 
-class AnonymousUser(AnonymousUserMixin):
-    role = 'user'  # Ou None/outro valor padrão
-
+# Helpers
 def get_recent_posts():
     fuso_sp = pytz.timezone('America/Sao_Paulo')
-    current_time = datetime.now(fuso_sp)
-    
+    now = datetime.now(fuso_sp)
     posts = Post.query.filter(
         db.or_(
             Post.is_published == True,
-            db.and_(
-                Post.scheduled_for.isnot(None),
-                Post.scheduled_for <= current_time
-            )
+            db.and_(Post.scheduled_for.isnot(None), Post.scheduled_for <= now)
         )
     ).order_by(Post.created_at.desc()).limit(3).all()
-    
     return [{
-        'id': post.id,
-        'title': post.title,
-        'content': post.content,
-        'created_at': post.created_at.astimezone(fuso_sp).strftime('%d/%m/%Y %H:%M')
-    } for post in posts]
+        'id': p.id,
+        'title': p.title,
+        'content': p.content,
+        'main_image': p.main_image,
+        'created_at': p.created_at.astimezone(fuso_sp).strftime('%d/%m/%Y %H:%M')
+    } for p in posts]
 
-
-    
-    
 def publish_scheduled_posts():
     with app.app_context():
         fuso_sp = pytz.timezone('America/Sao_Paulo')
-        current_time = datetime.now(fuso_sp)
-        
-        scheduled_posts = Post.query.filter(
-            Post.is_published == False,
-            Post.scheduled_for <= current_time
-        ).all()
-
-        for post in scheduled_posts:
-            post.is_published = True
-        
+        now = datetime.now(fuso_sp)
+        pendentes = Post.query.filter(Post.is_published==False, Post.scheduled_for<=now).all()
+        for p in pendentes:
+            p.is_published = True
         db.session.commit()
 
-
+# Rotas
 @app.route('/')
 def home():
-    skills = [
-        "Python", "Flask", "HTML", "CSS", "JavaScript",
-        "SQL", "Git", "Linux", "Desenvolvimento Web", "Manutenção de Computadores"
-    ]
+    skills = ["Python","Flask","HTML","CSS","JavaScript","SQL","Git","Linux","Desenvolvimento Web"]
     recent_posts = get_recent_posts()
     return render_template('index.html', skills=skills, recent_posts=recent_posts, current_user=current_user)
-
-@app.route('/post/<int:post_id>')
-def post(post_id):
-    post = Post.query.get_or_404(post_id)
-    comments = Comment.query.filter_by(post_id=post.id).order_by(Comment.created_at.desc()).all()
-    
-    post_dict = {
-        'id': post.id,
-        'title': post.title,
-        'content': post.content,
-        'created_at': post.created_at.strftime('%d/%m/%Y %H:%M'),
-        'scheduled_for': post.scheduled_for.strftime('%d/%m/%Y %H:%M'),
-        'user': post.user.username
-    }
-
-    recent_posts = get_recent_posts()
-    
-    return render_template('post.html', post=post_dict, recent_posts=recent_posts, comments=comments, user=current_user)
-
-
-@app.route('/create', methods=['GET', 'POST'])
-@admin_required
-def create():
-    if request.method == 'POST':
-        title = request.form['title']
-        content = request.form['content']
-        scheduled_date = request.form.get('scheduled_date')
-        scheduled_time = request.form.get('scheduled_time')
-        
-        fuso_sp = pytz.timezone('America/Sao_Paulo')
-
-        if not title or not content:
-            flash('Título e conteúdo são obrigatórios!', 'danger')
-            return redirect(url_for('create'))
-        
-        image_file = request.files.get('main_image')
-        main_image_filename = None
-
-        if image_file and allowed_file(image_file.filename):
-            filename = secure_filename(image_file.filename)
-            image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            image_file.save(image_path)
-            main_image_filename = filename
-
-
-        new_post = Post(
-            title=title,
-            content=content,
-            main_image=main_image_filename,
-            is_published=False,
-            user_id=current_user.id
-        )
-
-        if scheduled_date and scheduled_time:
-            try:
-                scheduled_datetime = datetime.strptime(
-                    f"{scheduled_date} {scheduled_time}",
-                    "%Y-%m-%d %H:%M"
-                )
-                # Localiza o horário em São Paulo
-                scheduled_datetime = fuso_sp.localize(scheduled_datetime)
-                new_post.scheduled_for = scheduled_datetime
-            except ValueError:
-                flash('Data ou hora inválida!', 'danger')
-                return redirect(url_for('create'))
-
-        db.session.add(new_post)
-        db.session.commit()
-        flash('Post agendado com sucesso!', 'success')
-        return redirect(url_for('all_posts'))
-
-    return render_template('create.html')
-
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        hashed_password = generate_password_hash(password)
-        new_user = User(username=username, password=hashed_password, role='user')
-        try:
-            db.session.add(new_user)
-            db.session.commit()
-            flash('Registro bem-sucedido! Faça login.', 'success')
-            return redirect(url_for('login'))
-        except:
-            db.session.rollback()
-            flash('Usuário já existe.', 'danger')
-    return render_template('register.html')
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        user = User.query.filter_by(username=username).first()
-        
-        if user and check_password_hash(user.password, password):
-            login_user(user)  # Autentica o usuário antes de verificar a role
-            
-            # Verificação de role após login
-            if user.role == 'admin':  # Corrigido: usar user.role em vez de current_user
-                flash('Login admin realizado com sucesso!', 'success')
-                return redirect(url_for('all_posts'))
-            else:
-                flash('Login de usuário realizado!', 'success')
-                return redirect(url_for('home'))
-        else:
-            flash('Combinação usuário/senha incorreta', 'danger')
-    
-    return render_template('login.html')
-
-
-@app.route('/post/<int:post_id>/comment', methods=['POST'])
-@login_required
-def add_comment(post_id):
-    content = request.form.get('content')
-    
-    if not content:
-        flash('O comentário não pode estar vazio.', 'danger')
-        return redirect(url_for('post', post_id=post_id))
-    
-    comment = Comment(post_id=post_id, user_id=current_user.id, content=content)
-    db.session.add(comment)
-    db.session.commit()
-    
-    flash('Comentário adicionado com sucesso!', 'success')
-    return redirect(url_for('post', post_id=post_id))
 
 @app.route('/posts')
 @admin_required
@@ -260,52 +115,78 @@ def all_posts():
     posts = Post.query.order_by(Post.created_at.desc()).all()
     return render_template('all_posts.html', posts=posts)
 
-@app.route('/post/<int:post_id>/delete', methods=['POST'])
-@admin_required
-def delete_post(post_id):
+@app.route('/post/<int:post_id>')
+def post_view(post_id):
     post = Post.query.get_or_404(post_id)
-    if post:
-        db.session.delete(post)
-        db.session.commit()
-        flash('Post excluído com sucesso!', 'success')
-    return redirect(url_for('all_posts'))
+    comments = Comment.query.filter_by(post_id=post.id).order_by(Comment.created_at.desc()).all()
+    post_dict = {
+        'id': post.id,
+        'title': post.title,
+        'content': post.content,
+        'main_image': post.main_image,
+        'created_at': post.created_at.strftime('%d/%m/%Y %H:%M'),
+        'scheduled_for': post.scheduled_for.strftime('%d/%m/%Y %H:%M') if post.scheduled_for else '',
+        'user': post.user.username
+    }
+    recent_posts = get_recent_posts()
+    return render_template('post.html', post=post_dict, recent_posts=recent_posts, comments=comments, current_user=current_user)
 
-@app.route('/post/<int:post_id>/edit', methods=['GET', 'POST'])
+@app.route('/create', methods=['GET','POST'])
 @admin_required
-def edit_post(post_id):
-    post = Post.query.get_or_404(post_id)
-    fuso_sp = pytz.timezone('America/Sao_Paulo')
-    image_file = request.files.get('main_image')
-    if image_file and allowed_file(image_file.filename):
-        filename = secure_filename(image_file.filename)
-        image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        image_file.save(image_path)
-        post.main_image = filename
-
-
-    
+def create():
     if request.method == 'POST':
         title = request.form['title']
         content = request.form['content']
         scheduled_date = request.form.get('scheduled_date')
         scheduled_time = request.form.get('scheduled_time')
 
-        if not title or not content:
-            flash('Título e conteúdo são obrigatórios!', 'danger')
-            return redirect(url_for('edit_post', post_id=post.id))
+        # processa upload
+        file = request.files.get('main_image')
+        filename = None
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
-        post.title = title
-        post.content = content
-        
+        new_post = Post(title=title, content=content, main_image=filename, is_published=False, user_id=current_user.id)
+
+        # agendamento
         if scheduled_date and scheduled_time:
             try:
-                scheduled_datetime = datetime.strptime(
-                    f"{scheduled_date} {scheduled_time}",
-                    "%Y-%m-%d %H:%M"
-                )
-                # Localiza o horário em São Paulo
-                scheduled_datetime = fuso_sp.localize(scheduled_datetime)
-                post.scheduled_for = scheduled_datetime
+                dt = datetime.strptime(f"{scheduled_date} {scheduled_time}", "%Y-%m-%d %H:%M")
+                new_post.scheduled_for = pytz.timezone('America/Sao_Paulo').localize(dt)
+            except ValueError:
+                flash('Data ou hora inválida!', 'danger')
+                return redirect(url_for('create'))
+
+        db.session.add(new_post)
+        db.session.commit()
+        flash('Post criado com sucesso! 🚀', 'success')
+        return redirect(url_for('all_posts'))
+
+    return render_template('create.html')
+
+@app.route('/post/<int:post_id>/edit', methods=['GET','POST'])
+@admin_required
+def edit_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    if request.method == 'POST':
+        post.title = request.form['title']
+        post.content = request.form['content']
+
+        # upload novo
+        file = request.files.get('main_image')
+        if file and allowed_file(file.filename):
+            fname = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], fname))
+            post.main_image = fname
+
+        # agenda
+        sd = request.form.get('scheduled_date')
+        st = request.form.get('scheduled_time')
+        if sd and st:
+            try:
+                dt = datetime.strptime(f"{sd} {st}", "%Y-%m-%d %H:%M")
+                post.scheduled_for = pytz.timezone('America/Sao_Paulo').localize(dt)
                 post.is_published = False
             except ValueError:
                 flash('Data ou hora inválida!', 'danger')
@@ -315,44 +196,82 @@ def edit_post(post_id):
             post.is_published = True
 
         db.session.commit()
-        flash('Post atualizado com sucesso!', 'success')
+        flash('Post atualizado com sucesso! 🎉', 'success')
         return redirect(url_for('all_posts'))
 
     return render_template('edit_post.html', post=post)
 
-@app.route("/feed")
-def rss_feed():
-    posts = Post.query.order_by(Post.created_at.desc()).limit(10).all()
-    
-    rss_template = """<?xml version="1.0" encoding="UTF-8" ?>
-    <rss version="2.0">
-      <channel>
-        <title>Chiapetta Dev Blog</title>
-        <link>https://chiapettadev.site</link>
-        <description>Últimos posts do Chiapetta Dev</description>
-        {% for post in posts %}
-        <item>
-          <title>{{ post.title }}</title>
-          <image>{{ post.main_image }}</image>
-          <description><![CDATA[{{ post.content[:150] }}...]]></description>
-          <pubDate>{{ post.created_at.strftime('%a, %d %b %Y %H:%M:%S +0000') }}</pubDate>
-        </item>
-        {% endfor %}
-      </channel>
-    </rss>
-    """
+@app.route('/post/<int:post_id>/delete', methods=['POST'])
+@admin_required
+def delete_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    db.session.delete(post)
+    db.session.commit()
+    flash('Post removido! 🗑️', 'success')
+    return redirect(url_for('all_posts'))
 
-    rss_xml = render_template_string(rss_template, posts=posts)
-    return Response(rss_xml, mimetype='application/rss+xml')
+@app.route('/post/<int:post_id>/comment', methods=['POST'])
+@login_required
+def add_comment(post_id):
+    content = request.form.get('content')
+    if not content:
+        flash('Comentário vazio não vale! 😅', 'danger')
+        return redirect(url_for('post_view', post_id=post_id))
+    comment = Comment(post_id=post_id, user_id=current_user.id, content=content)
+    db.session.add(comment)
+    db.session.commit()
+    flash('Comentário adicionado!', 'success')
+    return redirect(url_for('post_view', post_id=post_id))
 
+@app.route('/register', methods=['GET','POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = generate_password_hash(request.form['password'])
+        new_user = User(username=username, password=password, role='user')
+        try:
+            db.session.add(new_user); db.session.commit()
+            flash('Registro ok! Faça login 😉', 'success')
+            return redirect(url_for('login'))
+        except:
+            db.session.rollback()
+            flash('Usuário já existe!', 'danger')
+    return render_template('register.html')
 
+@app.route('/login', methods=['GET','POST'])
+def login():
+    if request.method == 'POST':
+        user = User.query.filter_by(username=request.form['username']).first()
+        if user and check_password_hash(user.password, request.form['password']):
+            login_user(user)
+            flash('Bem-vindo de volta!', 'success')
+            return redirect(url_for('all_posts' if user.role=='admin' else 'home'))
+        flash('Usuário/senha inválidos', 'danger')
+    return render_template('login.html')
 
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
-    flash('Logout realizado com sucesso.', 'success')
+    flash('Até mais! 👋', 'success')
     return redirect(url_for('home'))
+
+@app.route('/feed')
+def rss_feed():
+    posts = Post.query.order_by(Post.created_at.desc()).limit(10).all()
+    rss = render_template_string(
+        """<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>
+        <title>Chiapetta Dev</title><link>https://chiapettadev.site</link>
+        <description>Últimos posts</description>
+        {% for p in posts %}
+          <item><title>{{p.title}}</title>
+          <description><![CDATA[{{p.content[:150]}}...]]></description>
+          <pubDate>{{p.created_at.strftime('%a, %d %b %Y %H:%M:%S +0000')}}</pubDate>
+          </item>
+        {% endfor %}
+        </channel></rss>""", posts=posts
+    )
+    return Response(rss, mimetype='application/rss+xml')
 
 if __name__ == '__main__':
     with app.app_context():

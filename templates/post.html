@@ -1,108 +1,32 @@
 {% extends 'base.html' %}
-
-{% block title %}{{ post['title'] }}{% endblock %}
-
+{% block title %}{{ post.title }}{% endblock %}
 {% block content %}
 <div class="container mt-5">
-    <div class="row">
-        <div class="col-lg-10 mx-auto">
-            <!-- Post -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h1 class="card-title">{{ post['title'] }}</h1>
-                    <!-- Botão de Compartilhar -->
-            <div class="mt-4">
-    <h5>Compartilhe este post:</h5>
-    <div class="d-flex">
-        <!-- Facebook -->
-        <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.url }}" 
-           target="_blank" 
-           class="btn btn-primary me-2">
-           <i class="fa-brands fa-facebook-f"></i> Facebook
-        </a>
-
-        <!-- Twitter -->
-        <a href="https://twitter.com/intent/tweet?url={{ request.url }}&text={{ post['title'] }}" 
-           target="_blank" 
-           class="btn btn-info text-white me-2">
-           <i class="fa-brands fa-twitter"></i> Twitter
-        </a>
-
-        <!-- WhatsApp -->
-        <a href="https://api.whatsapp.com/send?text={{ post['title'] }} - {{ request.url }}" 
-           target="_blank" 
-           class="btn btn-success me-2">
-           <i class="fa-brands fa-whatsapp"></i> WhatsApp
-        </a>
-    </div>
-</div>
-
-                    <p class="text-muted">Publicado em: {{ post['scheduled_for'] }} por {{post['user']}}</p>
-                    {% if post['main_image'] %}
-                        <img src="{{ url_for('static', filename='uploads/' ~ post['main_image']) }}" class="img-fluid rounded mb-3" alt="Imagem principal do post">
-                    {% endif %}
-
-                    <p class="card-text">{{ post['content'] | safe }}</p>
-                </div>
-            </div>
-
-            <!-- Seção de Comentários -->
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h4>Comentários</h4>
-                </div>
-                <div class="card-body">
-                    {% if comments %}
-                        <ul class="list-group list-group-flush">
-                            {% for comment in comments %}
-                            <li class="list-group-item">
-                                <strong>{{ comment.user.username }}</strong>
-                                <span class="text-muted small">em {{ comment.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
-                                <p>{{ comment.content | safe }}</p>
-                            </li>                            
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        <p class="text-muted">Nenhum comentário ainda. Seja o primeiro a comentar!</p>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Formulário de Comentário -->
-            {% if current_user.is_authenticated %}
-            <div class="card mb-4">
-                <div class="card-header bg-secondary text-white">
-                    Adicionar Comentário
-                </div>
-                <div class="card-body">
-                    <form action="{{ url_for('add_comment', post_id=post['id']) }}" method="POST">
-                        <div class="mb-3">
-                            <textarea name="content" rows="3" class="form-control" placeholder="Escreva seu comentário..." required></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Enviar</button>
-                    </form>
-                </div>
-            </div>
-            {% else %}
-            <p>Faça <a href="{{ url_for('login') }}">login</a> ou 
-                <a href="{{ url_for('register') }}">registre-se</a> para comentar.</p>
-            {% endif %}
+  <div class="row">
+    <div class="col-lg-10 mx-auto">
+      <div class="card mb-4">
+        <div class="card-body">
+          <h1 class="card-title">{{ post.title }}</h1>
+          {% if post.main_image %}
+            <img src="{{ url_for('static', filename='uploads/'+post.main_image) }}"
+                 class="img-fluid rounded mb-3" alt="Imagem principal">
+          {% endif %}
+          <p class="text-muted">Publicado em {{ post.scheduled_for }} por {{ post.user }}</p>
+          <p class="card-text">{{ post.content | safe }}</p>
+          <!-- botões de compartilhar… -->
         </div>
+      </div>
+      <!-- comentários… -->
     </div>
+  </div>
 </div>
-
 <script>
-    tinymce.init({
-        selector: 'textarea',
-        language: 'pt_BR',
-        plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
-        toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat',
-        setup: function (editor) {
-            editor.on('change', function () {
-                tinymce.triggerSave();
-            });
-        }
-    });
+  tinymce.init({
+    selector: 'textarea',
+    language: 'pt_BR',
+    plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
+    toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat',
+    setup(editor){ editor.on('change',()=> tinymce.triggerSave()) }
+  });
 </script>
-
 {% endblock %}
