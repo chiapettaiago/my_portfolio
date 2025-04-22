@@ -7,11 +7,15 @@
 <div class="container">
     <h2>Editar Post</h2>
     
-    <form method="POST">
+    <form method="post" enctype="multipart/form-data">
         <div class="form-group mt-3 shadow-sm">
             <label for="title">Título</label>
             <input type="text" name="title" id="title" class="form-control" value="{{ post.title }}" required>
         </div>
+        <div class="form-group mt-3 shadow-sm">
+            <label for="main_image">Imagem Principal</label>
+            <input type="file" name="main_image" id="main_image" class="form-control">
+        </div>            
         
         <div class="form-group mt-3 shadow-sm">
             <label for="content">Conteúdo</label>

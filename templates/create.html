@@ -6,12 +6,15 @@
 <section class="py-5">
     <div class="container">
         <h1 class="mb-4">Criar Novo Post</h1>
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             <div class="form-group mt-3 shadow-sm">
                 <label for="title">Título</label>
                 <input type="text" name="title" id="title" required class="form-control">
             </div>
-            
+            <div class="form-group mt-3 shadow-sm">
+                <label for="main_image">Imagem Principal</label>
+                <input type="file" name="main_image" id="main_image" class="form-control">
+            </div>                    
             <div class="form-group mt-3 shadow-sm">
                 <label for="content">Conteúdo</label>
                 <textarea name="content" id="content" required class="form-control"></textarea>

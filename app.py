@@ -6,11 +6,24 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import pytz
 from datetime import datetime, timezone
 import pymysql
+import os
+from werkzeug.utils import secure_filename
+
+UPLOAD_FOLDER = 'static/uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'sua_chave_secreta'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://portfolio:8MEPBTxaaZRaKxs8@191.252.100.132/portfolio'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Cria a pasta se não existir
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
@@ -39,6 +52,7 @@ class Post(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(pytz.timezone('America/Sao_Paulo')))
     scheduled_for = db.Column(db.DateTime, nullable=True)
     is_published = db.Column(db.Boolean, default=False)
+    main_image = db.Column(db.String(255))  # <-- Adiciona esse campo aqui
     comments = db.relationship('Comment', backref='post', lazy=True)
     user = db.relationship('User', backref='posts')
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
@@ -144,10 +158,21 @@ def create():
         if not title or not content:
             flash('Título e conteúdo são obrigatórios!', 'danger')
             return redirect(url_for('create'))
+        
+        image_file = request.files.get('main_image')
+        main_image_filename = None
+
+        if image_file and allowed_file(image_file.filename):
+            filename = secure_filename(image_file.filename)
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            image_file.save(image_path)
+            main_image_filename = filename
+
 
         new_post = Post(
             title=title,
             content=content,
+            main_image=main_image_filename,
             is_published=False,
             user_id=current_user.id
         )
@@ -250,6 +275,14 @@ def delete_post(post_id):
 def edit_post(post_id):
     post = Post.query.get_or_404(post_id)
     fuso_sp = pytz.timezone('America/Sao_Paulo')
+    image_file = request.files.get('main_image')
+    if image_file and allowed_file(image_file.filename):
+        filename = secure_filename(image_file.filename)
+        image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        image_file.save(image_path)
+        post.main_image = filename
+
+
     
     if request.method == 'POST':
         title = request.form['title']
@@ -300,6 +333,7 @@ def rss_feed():
         {% for post in posts %}
         <item>
           <title>{{ post.title }}</title>
+          <image>{{ post.main_image }}</image>
           <description><![CDATA[{{ post.content[:150] }}...]]></description>
           <pubDate>{{ post.created_at.strftime('%a, %d %b %Y %H:%M:%S +0000') }}</pubDate>
         </item>
