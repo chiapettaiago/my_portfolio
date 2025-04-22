@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, flash, abort
+from flask import Flask, render_template, request, redirect, url_for, flash, abort, Response, render_template_string
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user, AnonymousUserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -42,6 +42,9 @@ class Post(db.Model):
     comments = db.relationship('Comment', backref='post', lazy=True)
     user = db.relationship('User', backref='posts')
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    def get_link(self):
+        return f"https://chiapettadev.site/posts/{self.slug}"
 
 
 @login_manager.user_loader
@@ -283,6 +286,31 @@ def edit_post(post_id):
         return redirect(url_for('all_posts'))
 
     return render_template('edit_post.html', post=post)
+
+@app.route("/feed")
+def rss_feed():
+    posts = Post.query.order_by(Post.created_at.desc()).limit(10).all()
+    
+    rss_template = """<?xml version="1.0" encoding="UTF-8" ?>
+    <rss version="2.0">
+      <channel>
+        <title>Chiapetta Dev Blog</title>
+        <link>https://chiapettadev.site</link>
+        <description>Últimos posts do Chiapetta Dev</description>
+        {% for post in posts %}
+        <item>
+          <title>{{ post.title }}</title>
+          <description><![CDATA[{{ post.content[:150] }}...]]></description>
+          <pubDate>{{ post.created_at.strftime('%a, %d %b %Y %H:%M:%S +0000') }}</pubDate>
+        </item>
+        {% endfor %}
+      </channel>
+    </rss>
+    """
+
+    rss_xml = render_template_string(rss_template, posts=posts)
+    return Response(rss_xml, mimetype='application/rss+xml')
+
 
 
 @app.route('/logout')
