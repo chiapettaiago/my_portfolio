@@ -16,6 +16,15 @@ app.config['SECRET_KEY'] = 'sua_chave_secreta'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://portfolio:8MEPBTxaaZRaKxs8@191.252.100.132/portfolio'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Otimizações de memória para SQLAlchemy
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 5,  # Reduz o número de conexões mantidas em pool
+    'pool_recycle': 3600,  # Recicla conexões após 1 hora
+    'pool_pre_ping': True,  # Verifica conexões antes de usar
+    'max_overflow': 10,  # Limita o número máximo de conexões extras
+    'echo': False  # Desativa logs SQL
+}
+
 # Configuração do Memcached
 mc = memcache.Client(['100.118.230.15:11211'], debug=0)
 CACHE_TIMEOUT = 300  # 5 minutos em segundos
@@ -92,6 +101,8 @@ def get_recent_posts():
     # Se não estiver no cache, busca do banco
     fuso_sp = pytz.timezone('America/Sao_Paulo')
     now = datetime.now(fuso_sp)
+    
+    # Carrega os posts com todos os campos necessários
     posts = Post.query.filter(
         db.or_(
             Post.is_published == True,
@@ -141,7 +152,9 @@ def post_view(post_id):
     cached_comments = mc.get(f'comments_{post_id}')
     
     if cached_post is None:
+        # Carrega o post completo
         post = Post.query.get_or_404(post_id)
+        
         post_dict = {
             'id': post.id,
             'title': post.title,
@@ -149,7 +162,7 @@ def post_view(post_id):
             'main_image': post.main_image,
             'created_at': post.created_at.strftime('%d/%m/%Y %H:%M'),
             'scheduled_for': post.scheduled_for.strftime('%d/%m/%Y %H:%M') if post.scheduled_for else '',
-            'user': post.user.username
+            'user': post.user.username if post.user else 'Desconhecido'
         }
         # Salva no cache
         mc.set(cache_key, post_dict, CACHE_TIMEOUT)
@@ -157,6 +170,7 @@ def post_view(post_id):
         post_dict = cached_post
     
     if cached_comments is None:
+        # Carrega os comentários completos
         comments = Comment.query.filter_by(post_id=post_id).order_by(Comment.created_at.desc()).all()
         # Salva no cache
         mc.set(f'comments_{post_id}', comments, CACHE_TIMEOUT)
@@ -308,7 +322,9 @@ def logout():
 
 @app.route('/feed')
 def rss_feed():
+    # Carrega os posts completos para o feed
     posts = Post.query.order_by(Post.created_at.desc()).limit(10).all()
+    
     rss = render_template_string(
         """<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>
         <title>Chiapetta Dev</title><link>https://chiapettadev.site</link>
@@ -326,4 +342,4 @@ def rss_feed():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(host='0.0.0.0', port=7000)
+    app.run(host='0.0.0.0', port=7000, threaded=True)
