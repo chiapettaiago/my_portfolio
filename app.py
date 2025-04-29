@@ -8,12 +8,17 @@ import pytz
 from datetime import datetime
 import os
 import pymysql
+import memcache
 
 # Configurações iniciais
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'sua_chave_secreta'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://portfolio:8MEPBTxaaZRaKxs8@191.252.100.132/portfolio'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Configuração do Memcached
+mc = memcache.Client(['100.118.230.15:11211'], debug=0)
+CACHE_TIMEOUT = 300  # 5 minutos em segundos
 
 # Pasta de upload e limites
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -77,6 +82,14 @@ def admin_required(f):
 
 # Helpers
 def get_recent_posts():
+    # Tenta buscar do cache primeiro
+    cache_key = 'recent_posts'
+    cached_posts = mc.get(cache_key)
+    
+    if cached_posts is not None:
+        return cached_posts
+        
+    # Se não estiver no cache, busca do banco
     fuso_sp = pytz.timezone('America/Sao_Paulo')
     now = datetime.now(fuso_sp)
     posts = Post.query.filter(
@@ -85,13 +98,18 @@ def get_recent_posts():
             db.and_(Post.scheduled_for.isnot(None), Post.scheduled_for <= now)
         )
     ).order_by(Post.created_at.desc()).limit(3).all()
-    return [{
+    
+    posts_data = [{
         'id': p.id,
         'title': p.title,
         'content': p.content,
         'main_image': p.main_image,
         'created_at': p.created_at.astimezone(fuso_sp).strftime('%d/%m/%Y %H:%M')
     } for p in posts]
+    
+    # Salva no cache
+    mc.set(cache_key, posts_data, CACHE_TIMEOUT)
+    return posts_data
 
 def publish_scheduled_posts():
     with app.app_context():
@@ -117,17 +135,34 @@ def all_posts():
 
 @app.route('/post/<int:post_id>')
 def post_view(post_id):
-    post = Post.query.get_or_404(post_id)
-    comments = Comment.query.filter_by(post_id=post.id).order_by(Comment.created_at.desc()).all()
-    post_dict = {
-        'id': post.id,
-        'title': post.title,
-        'content': post.content,
-        'main_image': post.main_image,
-        'created_at': post.created_at.strftime('%d/%m/%Y %H:%M'),
-        'scheduled_for': post.scheduled_for.strftime('%d/%m/%Y %H:%M') if post.scheduled_for else '',
-        'user': post.user.username
-    }
+    # Tenta buscar do cache primeiro
+    cache_key = f'post_{post_id}'
+    cached_post = mc.get(cache_key)
+    cached_comments = mc.get(f'comments_{post_id}')
+    
+    if cached_post is None:
+        post = Post.query.get_or_404(post_id)
+        post_dict = {
+            'id': post.id,
+            'title': post.title,
+            'content': post.content,
+            'main_image': post.main_image,
+            'created_at': post.created_at.strftime('%d/%m/%Y %H:%M'),
+            'scheduled_for': post.scheduled_for.strftime('%d/%m/%Y %H:%M') if post.scheduled_for else '',
+            'user': post.user.username
+        }
+        # Salva no cache
+        mc.set(cache_key, post_dict, CACHE_TIMEOUT)
+    else:
+        post_dict = cached_post
+    
+    if cached_comments is None:
+        comments = Comment.query.filter_by(post_id=post_id).order_by(Comment.created_at.desc()).all()
+        # Salva no cache
+        mc.set(f'comments_{post_id}', comments, CACHE_TIMEOUT)
+    else:
+        comments = cached_comments
+    
     recent_posts = get_recent_posts()
     return render_template('post.html', post=post_dict, recent_posts=recent_posts, comments=comments, current_user=current_user)
 
@@ -140,7 +175,6 @@ def create():
         scheduled_date = request.form.get('scheduled_date')
         scheduled_time = request.form.get('scheduled_time')
 
-        # processa upload
         file = request.files.get('main_image')
         filename = None
         if file and allowed_file(file.filename):
@@ -149,7 +183,6 @@ def create():
 
         new_post = Post(title=title, content=content, main_image=filename, is_published=False, user_id=current_user.id)
 
-        # agendamento
         if scheduled_date and scheduled_time:
             try:
                 dt = datetime.strptime(f"{scheduled_date} {scheduled_time}", "%Y-%m-%d %H:%M")
@@ -160,6 +193,10 @@ def create():
 
         db.session.add(new_post)
         db.session.commit()
+        
+        # Invalida o cache de posts recentes
+        mc.delete('recent_posts')
+        
         flash('Post criado com sucesso! 🚀', 'success')
         return redirect(url_for('all_posts'))
 
@@ -173,14 +210,12 @@ def edit_post(post_id):
         post.title = request.form['title']
         post.content = request.form['content']
 
-        # upload novo
         file = request.files.get('main_image')
         if file and allowed_file(file.filename):
             fname = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], fname))
             post.main_image = fname
 
-        # agenda
         sd = request.form.get('scheduled_date')
         st = request.form.get('scheduled_time')
         if sd and st:
@@ -196,6 +231,11 @@ def edit_post(post_id):
             post.is_published = True
 
         db.session.commit()
+        
+        # Invalida os caches relacionados
+        mc.delete(f'post_{post_id}')
+        mc.delete('recent_posts')
+        
         flash('Post atualizado com sucesso! 🎉', 'success')
         return redirect(url_for('all_posts'))
 
@@ -207,6 +247,12 @@ def delete_post(post_id):
     post = Post.query.get_or_404(post_id)
     db.session.delete(post)
     db.session.commit()
+    
+    # Invalida os caches relacionados
+    mc.delete(f'post_{post_id}')
+    mc.delete(f'comments_{post_id}')
+    mc.delete('recent_posts')
+    
     flash('Post removido! 🗑️', 'success')
     return redirect(url_for('all_posts'))
 
@@ -220,6 +266,10 @@ def add_comment(post_id):
     comment = Comment(post_id=post_id, user_id=current_user.id, content=content)
     db.session.add(comment)
     db.session.commit()
+    
+    # Invalida o cache de comentários
+    mc.delete(f'comments_{post_id}')
+    
     flash('Comentário adicionado!', 'success')
     return redirect(url_for('post_view', post_id=post_id))
 

@@ -4,3 +4,4 @@ flask_login
 werkzeug
 pymysql
 pytz
+python-memcached==1.59
