@@ -31,7 +31,7 @@
                     {% endif %}
                     <div class="card-body">
                         <h5 class="card-title">{{ recent_post.title }}</h5>
-                        <p class="card-text">{{ recent_post.content[:100] }}...</p>
+                        <p class="card-text">{{ recent_post.content[:100] | safe }}...</p>
                         <a href="{{ url_for('post_view', post_id=recent_post.id) }}" class="btn btn-primary">Ler mais</a>
                     </div>
                 </div>
