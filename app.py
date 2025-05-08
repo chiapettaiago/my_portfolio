@@ -9,24 +9,50 @@ from datetime import datetime
 import os
 import pymysql
 import memcache
+import logging
+
+# Configurando logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 # Configurações iniciais
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'sua_chave_secreta'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://portfolio:8MEPBTxaaZRaKxs8@191.252.100.132/portfolio'
+
+# Configuração do MySQL usando variáveis de ambiente
+mysql_host = os.getenv('MYSQL_HOST', '191.252.100.132')
+mysql_port = os.getenv('MYSQL_PORT', '3306')
+mysql_user = 'portfolio'
+mysql_password = '8MEPBTxaaZRaKxs8'
+mysql_db = 'portfolio'
+
+# Log das configurações de conexão
+logger.debug(f"Tentando conectar ao MySQL em: {mysql_host}:{mysql_port}")
+logger.debug(f"Usuário: {mysql_user}")
+logger.debug(f"Database: {mysql_db}")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{mysql_user}:{mysql_password}@{mysql_host}:{mysql_port}/{mysql_db}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Otimizações de memória para SQLAlchemy
+# Otimizações de memória para SQLAlchemy com configurações específicas do MySQL
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_size': 5,  # Reduz o número de conexões mantidas em pool
-    'pool_recycle': 3600,  # Recicla conexões após 1 hora
-    'pool_pre_ping': True,  # Verifica conexões antes de usar
-    'max_overflow': 10,  # Limita o número máximo de conexões extras
-    'echo': False  # Desativa logs SQL
+    'pool_size': 5,
+    'pool_recycle': 3600,
+    'pool_pre_ping': True,
+    'max_overflow': 10,
+    'echo': True,  # Ativando logs SQL para debug
+    'connect_args': {
+        'connect_timeout': 30,  # Aumentando o timeout para 30 segundos
+        'charset': 'utf8mb4',
+        'use_unicode': True,
+        'client_flag': pymysql.constants.CLIENT.MULTI_STATEMENTS
+    }
 }
 
-# Configuração do Memcached
-mc = memcache.Client(['100.118.230.15:11211'], debug=0)
+# Configuração do Memcached usando variáveis de ambiente
+memcached_host = os.getenv('MEMCACHED_HOST', '191.252.100.132')
+memcached_port = os.getenv('MEMCACHED_PORT', '11211')
+mc = memcache.Client([f'{memcached_host}:{memcached_port}'], debug=1)  # Ativando debug do memcached
 CACHE_TIMEOUT = 300  # 5 minutos em segundos
 
 # Pasta de upload e limites
@@ -46,6 +72,15 @@ def allowed_file(filename):
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+
+# Teste de conexão inicial
+try:
+    with app.app_context():
+        db.engine.connect()
+        logger.info("Conexão com o banco de dados estabelecida com sucesso!")
+except Exception as e:
+    logger.error(f"Erro ao conectar ao banco de dados: {str(e)}")
+    raise
 
 # Modelos
 class User(UserMixin, db.Model):

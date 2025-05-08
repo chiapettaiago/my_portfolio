@@ -1,0 +1,28 @@
+{% if current_user.is_authenticated %}
+<div class="comment-form mb-4">
+    <h4>Adicionar Comentário</h4>
+    <form action="{{ url_for('add_comment', post_id=post.id) }}" method="POST">
+        <div class="form-group">
+            <textarea name="content" class="form-control" rows="3" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary mt-2">Enviar Comentário</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="comments-section">
+    <h4>Comentários ({{ comments|length }})</h4>
+    {% if comments %}
+        {% for comment in comments %}
+            <div class="comment mb-3 p-3 border rounded">
+                <div class="d-flex justify-content-between">
+                    <strong>{{ comment.user.username }}</strong>
+                    <small class="text-muted">{{ comment.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                </div>
+                <p class="mt-2 mb-0">{{ comment.content }}</p>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p class="text-muted">Nenhum comentário ainda. Seja o primeiro a comentar!</p>
+    {% endif %}
+</div> 

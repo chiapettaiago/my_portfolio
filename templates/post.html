@@ -1,24 +1,44 @@
 {% extends 'base.html' %}
 {% block title %}{{ post.title }}{% endblock %}
 {% block content %}
-<div class="container mt-5">
-  <div class="row">
-    <div class="col-lg-10 mx-auto">
-      <div class="card mb-4">
-        <div class="card-body">
-          <h1 class="card-title">{{ post.title }}</h1>
-          {% if post.main_image %}
-            <img src="{{ url_for('static', filename='uploads/'+post.main_image) }}"
-                 class="img-fluid rounded mb-3" alt="Imagem principal">
-          {% endif %}
-          <p class="text-muted">Publicado em {{ post.scheduled_for }} por {{ post.user }}</p>
-          <p class="card-text">{{ post.content | safe }}</p>
-          <!-- botões de compartilhar… -->
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <article class="blog-post">
+                <h1 class="blog-post-title">{{ post.title }}</h1>
+                <p class="blog-post-meta text-muted">
+                    {{ post.created_at }} por {{ post.user }}
+                </p>
+                {% if post.main_image %}
+                <img src="{{ url_for('static', filename='uploads/' + post.main_image) }}" class="img-fluid mb-4" alt="{{ post.title }}">
+                {% endif %}
+                <div class="blog-post-content">
+                    {{ post.content|safe }}
+                </div>
+            </article>
+
+            <!-- Seção de Comentários -->
+            {% include 'comments.html' %}
         </div>
-      </div>
-      <!-- comentários… -->
+
+        <div class="col-md-4">
+            <div class="recent-posts">
+                <h3>Posts Recentes</h3>
+                {% for recent_post in recent_posts %}
+                <div class="card mb-3">
+                    {% if recent_post.main_image %}
+                    <img src="{{ url_for('static', filename='uploads/' + recent_post.main_image) }}" class="card-img-top" alt="{{ recent_post.title }}">
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ recent_post.title }}</h5>
+                        <p class="card-text">{{ recent_post.content[:100] }}...</p>
+                        <a href="{{ url_for('post_view', post_id=recent_post.id) }}" class="btn btn-primary">Ler mais</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 <script>
   tinymce.init({

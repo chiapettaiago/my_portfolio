@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "7000:7000"
+    environment:
+      - SQLALCHEMY_DATABASE_URI=mysql+pymysql://portfolio:senha@db:3306/portfolio
+      - SECRET_KEY=sua_chave_secreta
+      - MEMCACHED_SERVERS=memcached:11211
+    depends_on:
+      - db
+      - memcached
+
+  db:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD=root
+      MYSQL_DATABASE=portfolio
+      MYSQL_USER=portfolio
+      MYSQL_PASSWORD=senha
+    volumes:
+      - dbdata:/var/lib/mysql
+
+  memcached:
+    image: memcached:latest
+    ports:
+      - "11211:11211"
+
+volumes:
+  dbdata:
