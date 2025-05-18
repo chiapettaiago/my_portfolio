@@ -315,7 +315,6 @@ def delete_post(post_id):
     mc.delete(f'comments_{post_id}')
     mc.delete('recent_posts')
     
-    flash('Post removido! 🗑️', 'success')
     return redirect(url_for('all_posts'))
 
 @app.route('/post/<int:post_id>/comment', methods=['POST'])
@@ -365,7 +364,6 @@ def login():
 @login_required
 def logout():
     logout_user()
-    flash('Até mais! 👋', 'success')
     return redirect(url_for('home'))
 
 @app.route('/feed')

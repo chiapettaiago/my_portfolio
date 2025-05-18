@@ -42,7 +42,7 @@
             {% for post in posts %}
             <tr class="animate-fade-in" style="animation-delay: {{ loop.index0 * 0.05 }}s">
               <td>
-                <a href="{{ url_for('post_view', post_id=post.id) }}" class="text-decoration-none text-primary">
+                <a href="{{ url_for('post_view', post_id=post.id) }}" class="text-decoration-none text-dark">
                   {{ post.title }}
                 </a>
               </td>
@@ -68,35 +68,15 @@
                     <i class="fas fa-edit"></i>
                   </a>
                   
-                  <!-- Botão Excluir -->
-                  <button type="button" class="btn btn-sm btn-danger" 
-                          data-bs-toggle="modal" 
-                          data-bs-target="#deleteModal{{ post.id }}"
-                          title="Excluir">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                  
-                  <!-- Modal de confirmação para exclusão -->
-                  <div class="modal fade" id="deleteModal{{ post.id }}" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered">
-                      <div class="modal-content">
-                        <div class="modal-header bg-danger text-white">
-                          <h5 class="modal-title" id="deleteModalLabel">Confirmar exclusão</h5>
-                          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                          <p>Tem certeza que deseja excluir o post <strong>"{{ post.title }}"</strong>?</p>
-                          <p class="text-danger"><small>Esta ação não pode ser desfeita.</small></p>
-                        </div>
-                        <div class="modal-footer">
-                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                          <form action="{{ url_for('delete_post', post_id=post.id) }}" method="POST">
-                            <button type="submit" class="btn btn-danger">Confirmar exclusão</button>
-                          </form>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <!-- Botão Excluir: usando confirm JS -->
+                  <form action="{{ url_for('delete_post', post_id=post.id) }}" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-danger" 
+                            onclick="return confirm('Tem certeza que deseja excluir este post?');" 
+                            title="Excluir">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </form>
+                  <!-- Fim botão Excluir -->
                 </div>
               </td>
             </tr>

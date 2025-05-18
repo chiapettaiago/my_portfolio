@@ -110,7 +110,7 @@
         <div class="row">
             {% for post in recent_posts %}
                 <div class="col-md-4 mb-4">
-                    <div class="glass-card h-100">
+                    <div class="glass-card h-100 d-flex flex-column">
                         {% if post['main_image'] %}
                             <div class="card-img-container" style="height:200px; overflow:hidden;">
                                 <img src="{{ url_for('static', filename='uploads/' ~ post['main_image']) }}" 
@@ -119,7 +119,7 @@
                                      alt="Imagem principal do post">
                             </div>
                         {% endif %}
-                        <div class="card-body p-4">
+                        <div class="card-body p-4 flex-grow-1 d-flex flex-column justify-content-between">
                             <h5 class="card-title mb-3">{{ post['title'] }}</h5>
                             <p class="card-text text-muted">{{ post['content'][:100] | safe }}...</p>
                             <div class="d-flex justify-content-between align-items-center mt-4">
