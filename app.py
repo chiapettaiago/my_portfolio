@@ -385,6 +385,18 @@ def rss_feed():
     )
     return Response(rss, mimetype='application/rss+xml')
 
+@app.route('/linktree')
+def linktree():
+    # Lista de links para Linktree
+    links = [
+        {'name': 'Portfólio', 'url': url_for('home', _external=True)},
+        {'name': 'Blog', 'url': url_for('posts_all', _external=True)},
+        {'name': 'GitHub', 'url': 'https://github.com/chiapettaiago'},
+        {'name': 'LinkedIn', 'url': 'https://www.linkedin.com/in/iago-chiapetta-794b59164/'},
+        {'name': 'WhatsApp', 'url': 'https://wa.link/fs04yl'},
+    ]
+    return render_template('linktree.html', links=links)
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
