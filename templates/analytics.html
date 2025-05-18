@@ -1,0 +1,410 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard de Analytics - Chiapetta Dev{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="glass-card">
+    <div class="card-body p-4">
+      <!-- Cabeçalho compacto com filtros integrados -->
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4">
+        <h2 class="mb-3 mb-md-0"><i class="fas fa-chart-line me-2"></i>Analytics</h2>
+        
+        <form class="d-flex flex-column flex-md-row gap-2 align-items-center">
+          <div class="d-flex align-items-center">
+            <input type="date" class="form-control form-control-sm" id="start" name="start" value="{{ start_date }}">
+            <span class="mx-2">até</span>
+            <input type="date" class="form-control form-control-sm" id="end" name="end" value="{{ end_date }}">
+          </div>
+          <button type="submit" class="btn btn-sm btn-primary">
+            <i class="fas fa-filter me-1"></i>Filtrar
+          </button>
+        </form>
+      </div>
+      
+      <!-- Cards de métricas em linha compacta -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <div class="glass-card">
+            <div class="card-body p-3 d-flex align-items-center">
+              <span class="badge rounded-pill bg-primary bg-opacity-25 p-2 me-3">
+                <i class="fas fa-eye text-primary"></i>
+              </span>
+              <div>
+                <h6 class="mb-0 text-muted">Total de visualizações</h6>
+                <h4 class="mb-0">{{ total_views }}</h4>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="glass-card">
+            <div class="card-body p-3 d-flex align-items-center">
+              <span class="badge rounded-pill bg-success bg-opacity-25 p-2 me-3">
+                <i class="fas fa-users text-success"></i>
+              </span>
+              <div>
+                <h6 class="mb-0 text-muted">Visitantes únicos</h6>
+                <h4 class="mb-0">{{ unique_visitors }}</h4>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="glass-card">
+            <div class="card-body p-3 d-flex align-items-center">
+              <span class="badge rounded-pill bg-warning bg-opacity-25 p-2 me-3">
+                <i class="fas fa-percentage text-warning"></i>
+              </span>
+              <div>
+                {% set conversion_rate = (unique_visitors / total_views * 100) if total_views > 0 else 0 %}
+                <h6 class="mb-0 text-muted">Taxa de conversão</h6>
+                <h4 class="mb-0">{{ "%.1f"|format(conversion_rate) }}%</h4>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Nav tabs para organizar o conteúdo -->
+      <ul class="nav nav-tabs mb-3" id="analyticsTab" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="traffic-tab" data-bs-toggle="tab" data-bs-target="#traffic" type="button" role="tab">
+            <i class="fas fa-chart-line me-1"></i>Tráfego
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="pages-tab" data-bs-toggle="tab" data-bs-target="#pages" type="button" role="tab">
+            <i class="fas fa-file-alt me-1"></i>Páginas
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="devices-tab" data-bs-toggle="tab" data-bs-target="#devices" type="button" role="tab">
+            <i class="fas fa-mobile-alt me-1"></i>Dispositivos
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary" type="button" role="tab">
+            <i class="fas fa-table me-1"></i>Resumo
+          </button>
+        </li>
+      </ul>
+      
+      <!-- Conteúdo das tabs -->
+      <div class="tab-content" id="analyticsTabContent">
+        <!-- Tab Tráfego -->
+        <div class="tab-pane fade show active" id="traffic" role="tabpanel">
+          <div class="d-flex justify-content-end mb-2">
+            <div class="btn-group btn-group-sm">
+              <button type="button" class="btn btn-outline-primary active" id="dailyView">Diário</button>
+              <button type="button" class="btn btn-outline-primary" id="weeklyView">Semanal</button>
+            </div>
+          </div>
+          <div style="height: 300px;">
+            <canvas id="viewsChart"></canvas>
+          </div>
+        </div>
+        
+        <!-- Tab Páginas -->
+        <div class="tab-pane fade" id="pages" role="tabpanel">
+          <div class="d-flex justify-content-end mb-2">
+            <button class="btn btn-sm btn-outline-primary" id="toggleChartType">
+              <i class="fas fa-chart-bar me-1"></i>Alternar visualização
+            </button>
+          </div>
+          <div style="height: 300px;">
+            <canvas id="pagesChart"></canvas>
+          </div>
+        </div>
+        
+        <!-- Tab Dispositivos -->
+        <div class="tab-pane fade" id="devices" role="tabpanel">
+          <div class="row">
+            <div class="col-md-6">
+              <div style="height: 300px;">
+                <canvas id="deviceChart"></canvas>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div style="height: 300px;">
+                <canvas id="browserChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Tab Resumo -->
+        <div class="tab-pane fade" id="summary" role="tabpanel">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Métrica</th>
+                  <th>Valor</th>
+                  <th>Percentual</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Média de visualizações -->
+                {% set avg_views_per_day = (total_views / (days_json|length)) if days_json|length > 0 else 0 %}
+                <tr>
+                  <td>Média diária de visitas</td>
+                  <td>{{ "%.1f"|format(avg_views_per_day) }}</td>
+                  <td>-</td>
+                </tr>
+                
+                <!-- Top dispositivo -->
+                {% if device_labels|length > 0 %}
+                {% set top_device_index = device_counts.index(device_counts|max) %}
+                {% set top_device = device_labels[top_device_index] %}
+                {% set top_device_percent = (device_counts[top_device_index] / device_counts|sum * 100) if device_counts|sum > 0 else 0 %}
+                <tr>
+                  <td>Dispositivo mais usado</td>
+                  <td>{{ top_device }}</td>
+                  <td>{{ "%.1f"|format(top_device_percent) }}%</td>
+                </tr>
+                {% endif %}
+                
+                <!-- Top navegador -->
+                {% if browser_labels|length > 0 %}
+                {% set top_browser_index = browser_counts.index(browser_counts|max) %}
+                {% set top_browser = browser_labels[top_browser_index] %}
+                {% set top_browser_percent = (browser_counts[top_browser_index] / browser_counts|sum * 100) if browser_counts|sum > 0 else 0 %}
+                <tr>
+                  <td>Navegador mais usado</td>
+                  <td>{{ top_browser }}</td>
+                  <td>{{ "%.1f"|format(top_browser_percent) }}%</td>
+                </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Importar Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Dados para gráficos
+    const days = {{ days_json|safe }};
+    const viewsCount = {{ views_json|safe }};
+    const pageLabels = {{ page_labels_json|safe }};
+    const pageCounts = {{ page_counts_json|safe }};
+    const deviceLabels = {{ device_labels_json|safe }};
+    const deviceCounts = {{ device_counts_json|safe }};
+    const browserLabels = {{ browser_labels_json|safe }};
+    const browserCounts = {{ browser_counts_json|safe }};
+    
+    // Paleta de cores personalizada
+    const colorPalette = [
+      'rgba(106, 17, 203, 0.7)',
+      'rgba(37, 117, 252, 0.7)',
+      'rgba(255, 126, 95, 0.7)',
+      'rgba(254, 180, 123, 0.7)',
+      'rgba(75, 192, 192, 0.7)',
+      'rgba(255, 159, 64, 0.7)',
+      'rgba(153, 102, 255, 0.7)',
+      'rgba(255, 99, 132, 0.7)',
+      'rgba(54, 162, 235, 0.7)',
+      'rgba(255, 206, 86, 0.7)',
+    ];
+    
+    // Bordas para os gráficos
+    const borderColors = colorPalette.map(color => color.replace('0.7', '1'));
+    
+    // Função para gerar gradiente
+    function createGradient(ctx, startColor, endColor) {
+      const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+      gradient.addColorStop(0, startColor);
+      gradient.addColorStop(1, endColor);
+      return gradient;
+    }
+    
+    // Configurar gráfico de visualizações
+    const viewsCtx = document.getElementById('viewsChart').getContext('2d');
+    const gradient = createGradient(viewsCtx, 'rgba(106, 17, 203, 0.6)', 'rgba(37, 117, 252, 0.1)');
+    const viewsChart = new Chart(viewsCtx, {
+      type: 'line',
+      data: {
+        labels: days,
+        datasets: [{
+          label: 'Visualizações',
+          data: viewsCount,
+          backgroundColor: gradient,
+          borderColor: 'rgba(106, 17, 203, 1)',
+          borderWidth: 2,
+          pointBackgroundColor: 'rgba(37, 117, 252, 1)',
+          pointBorderColor: '#fff',
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { stepSize: 1 }
+          }
+        }
+      }
+    });
+    
+    // Configurar gráfico de páginas
+    const pagesCtx = document.getElementById('pagesChart').getContext('2d');
+    let currentPageChartType = 'bar';
+    const pagesChart = new Chart(pagesCtx, {
+      type: currentPageChartType,
+      data: {
+        labels: pageLabels,
+        datasets: [{
+          label: 'Visualizações',
+          data: pageCounts,
+          backgroundColor: colorPalette,
+          borderColor: borderColors,
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+    
+    // Configurar gráfico de dispositivos
+    const deviceCtx = document.getElementById('deviceChart').getContext('2d');
+    const deviceChart = new Chart(deviceCtx, {
+      type: 'doughnut',
+      data: {
+        labels: deviceLabels,
+        datasets: [{
+          data: deviceCounts,
+          backgroundColor: colorPalette,
+          borderColor: borderColors,
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: { boxWidth: 10 }
+          },
+          title: {
+            display: true,
+            text: 'Dispositivos',
+            position: 'top'
+          }
+        }
+      }
+    });
+    
+    // Configurar gráfico de navegadores
+    const browserCtx = document.getElementById('browserChart').getContext('2d');
+    const browserChart = new Chart(browserCtx, {
+      type: 'pie',
+      data: {
+        labels: browserLabels,
+        datasets: [{
+          data: browserCounts,
+          backgroundColor: colorPalette,
+          borderColor: borderColors,
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: { boxWidth: 10 }
+          },
+          title: {
+            display: true,
+            text: 'Navegadores',
+            position: 'top'
+          }
+        }
+      }
+    });
+
+    // Alternar tipo de gráfico de páginas
+    document.getElementById('toggleChartType').addEventListener('click', function() {
+      if (currentPageChartType === 'bar') {
+        currentPageChartType = 'line';
+        pagesChart.config.type = 'line';
+        pagesChart.config.options.indexAxis = 'x';
+        pagesChart.data.datasets[0].backgroundColor = colorPalette[0];
+        pagesChart.data.datasets[0].borderColor = borderColors[0];
+        this.innerHTML = '<i class="fas fa-chart-line me-1"></i>Alternar visualização';
+      } else {
+        currentPageChartType = 'bar';
+        pagesChart.config.type = 'bar';
+        pagesChart.config.options.indexAxis = 'y';
+        pagesChart.data.datasets[0].backgroundColor = colorPalette;
+        pagesChart.data.datasets[0].borderColor = borderColors;
+        this.innerHTML = '<i class="fas fa-chart-bar me-1"></i>Alternar visualização';
+      }
+      pagesChart.update();
+    });
+
+    // Simulação de visualização semanal
+    document.getElementById('weeklyView').addEventListener('click', function() {
+      // Agrupa dados por semana (simulado)
+      const weeklyLabels = [];
+      const weeklyData = [];
+      
+      if (days.length > 7) {
+        for (let i = 0; i < days.length; i += 7) {
+          const weekEnd = Math.min(i + 6, days.length - 1);
+          const weekLabel = `${days[i]} a ${days[weekEnd]}`;
+          weeklyLabels.push(weekLabel);
+          
+          let sum = 0;
+          for (let j = i; j <= weekEnd && j < viewsCount.length; j++) {
+            sum += viewsCount[j];
+          }
+          weeklyData.push(sum);
+        }
+        
+        viewsChart.data.labels = weeklyLabels;
+        viewsChart.data.datasets[0].data = weeklyData;
+        viewsChart.update();
+        
+        document.getElementById('dailyView').classList.remove('active');
+        this.classList.add('active');
+      }
+    });
+    
+    // Voltar para visualização diária
+    document.getElementById('dailyView').addEventListener('click', function() {
+      viewsChart.data.labels = days;
+      viewsChart.data.datasets[0].data = viewsCount;
+      viewsChart.update();
+      
+      document.getElementById('weeklyView').classList.remove('active');
+      this.classList.add('active');
+    });
+  });
+</script>
+{% endblock %}

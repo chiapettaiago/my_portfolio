@@ -1,7 +1,8 @@
-flask
-flask_sqlalchemy
-flask_login
-werkzeug
-pymysql
-pytz
+Flask==2.0.1
+Flask-SQLAlchemy==2.5.1
+flask-login==0.6.2
+Werkzeug==2.0.1
 python-memcached==1.59
+PyMySQL==1.0.2
+pytz==2021.1
+user-agents==2.2.0

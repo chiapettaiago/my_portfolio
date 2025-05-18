@@ -5,11 +5,14 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import pytz
-from datetime import datetime
+from datetime import datetime, date, timedelta
 import os
 import pymysql
 import memcache
 import logging
+import json
+from collections import Counter
+from user_agents import parse
 
 # Configurando logging
 logging.basicConfig(level=logging.DEBUG)
@@ -109,6 +112,18 @@ class Post(db.Model):
     user = db.relationship('User', backref='posts')
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
+# Modelo para contagem de acessos
+class PageView(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    path = db.Column(db.String(255), nullable=False)
+    ip = db.Column(db.String(45), nullable=False)
+    user_agent = db.Column(db.String(255), nullable=True)
+    browser = db.Column(db.String(50), nullable=True)
+    device_type = db.Column(db.String(20), nullable=True)
+    referrer = db.Column(db.String(255), nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -165,6 +180,35 @@ def publish_scheduled_posts():
         for p in pendentes:
             p.is_published = True
         db.session.commit()
+
+# Middleware para registrar acessos às páginas
+@app.before_request
+def track_page_view():
+    # Não registrar solicitações de recursos estáticos, favicon ou para a página de análise
+    if (request.path.startswith('/static') or 
+        request.path == '/favicon.ico' or 
+        request.path == '/analytics'):
+        return
+    
+    # Captura informações do acesso
+    user_agent_string = request.headers.get('User-Agent', '')
+    user_agent = parse(user_agent_string)
+    
+    page_view = PageView(
+        path=request.path,
+        ip=request.remote_addr,
+        user_agent=user_agent_string[:255],  # Limita o tamanho para evitar erros
+        browser=user_agent.browser.family,
+        device_type=('Mobile' if user_agent.is_mobile else 
+                    'Tablet' if user_agent.is_tablet else 
+                    'PC'),
+        referrer=request.referrer[:255] if request.referrer else None,
+        user_id=current_user.id if current_user.is_authenticated else None
+    )
+    
+    # Salva a visualização no banco de dados
+    db.session.add(page_view)
+    db.session.commit()
 
 # Rotas
 @app.route('/')
@@ -396,6 +440,89 @@ def linktree():
         {'name': 'WhatsApp', 'url': 'https://wa.link/fs04yl'},
     ]
     return render_template('linktree.html', links=links)
+
+@app.route('/analytics')
+@admin_required
+def analytics():
+    # Intervalo de tempo padrão: últimos 30 dias
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=30)
+    
+    # Parâmetros para filtro de data
+    filter_start = request.args.get('start')
+    filter_end = request.args.get('end')
+    
+    try:
+        if filter_start:
+            start_date = datetime.strptime(filter_start, '%Y-%m-%d')
+        if filter_end:
+            end_date = datetime.strptime(filter_end, '%Y-%m-%d')
+            # Ajusta para o final do dia
+            end_date = end_date.replace(hour=23, minute=59, second=59)
+    except ValueError:
+        # Em caso de erro de formato, usa o padrão
+        start_date = end_date - timedelta(days=30)
+        flash('Formato de data inválido. Usando os últimos 30 dias como padrão.', 'warning')
+    
+    # Busca visualizações no período
+    views = PageView.query.filter(
+        PageView.timestamp.between(start_date, end_date)
+    ).all()
+    
+    # Estatísticas gerais
+    total_views = len(views)
+    unique_visitors = len(set(view.ip for view in views))
+    
+    # Visualizações por dia
+    views_by_day = Counter()
+    for view in views:
+        day_str = view.timestamp.strftime('%Y-%m-%d')
+        views_by_day[day_str] += 1
+    
+    # Visualizações por página
+    views_by_page = Counter()
+    for view in views:
+        views_by_page[view.path] += 1
+    
+    # Visualizações por dispositivo
+    views_by_device = Counter()
+    for view in views:
+        views_by_device[view.device_type] += 1
+    
+    # Visualizações por navegador
+    views_by_browser = Counter()
+    for view in views:
+        views_by_browser[view.browser] += 1
+    
+    # Formatar dados para gráficos
+    days = sorted(views_by_day.keys())
+    views_count = [views_by_day[day] for day in days]
+    
+    pages = sorted(views_by_page.items(), key=lambda x: x[1], reverse=True)[:10]
+    page_labels = [page[0] for page in pages]
+    page_counts = [page[1] for page in pages]
+    
+    device_labels = list(views_by_device.keys())
+    device_counts = list(views_by_device.values())
+    
+    browser_labels = list(views_by_browser.keys())
+    browser_counts = list(views_by_browser.values())
+    
+    return render_template(
+        'analytics.html', 
+        total_views=total_views,
+        unique_visitors=unique_visitors,
+        days_json=json.dumps(days),
+        views_json=json.dumps(views_count),
+        page_labels_json=json.dumps(page_labels),
+        page_counts_json=json.dumps(page_counts),
+        device_labels_json=json.dumps(device_labels),
+        device_counts_json=json.dumps(device_counts),
+        browser_labels_json=json.dumps(browser_labels),
+        browser_counts_json=json.dumps(browser_counts),
+        start_date=start_date.strftime('%Y-%m-%d'),
+        end_date=end_date.strftime('%Y-%m-%d')
+    )
 
 if __name__ == '__main__':
     with app.app_context():
