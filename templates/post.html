@@ -1,61 +1,141 @@
 {% extends 'base.html' %}
+
 {% block title %}{{ post.title }}{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
+<div class="container py-5">
     <div class="row">
-        <div class="col-md-8">
-            <article class="blog-post">
-                <h1 class="blog-post-title">{{ post.title }}</h1>
-                <p class="blog-post-meta text-muted">
-                    {{ post.created_at }} por {{ post.user }}
-                </p>
+        <!-- Post principal -->
+        <div class="col-lg-8 mb-4">
+            <div class="glass-card mb-4">
+                <!-- Imagem do post -->
                 {% if post.main_image %}
-                <img src="{{ url_for('static', filename='uploads/' + post.main_image) }}" class="img-fluid mb-4" alt="{{ post.title }}">
+                    <div class="post-image-container" style="max-height:400px; overflow:hidden;">
+                        <img src="{{ url_for('static', filename='uploads/' ~ post.main_image) }}" 
+                             alt="Imagem do post" 
+                             class="card-img-top" 
+                             style="width:100%; object-fit:cover;">
+                    </div>
                 {% endif %}
-                <div class="blog-post-content">
-                    {{ post.content|safe }}
-                </div>
                 
-                <!-- Botão de Doação -->
-                <div class="donation-section text-center my-5 p-4 bg-light rounded">
-                    <h4>Gostou do conteúdo?</h4>
-                    <p class="text-muted mb-3">Se este post foi útil para você, considere fazer uma doação para apoiar o trabalho!</p>
-                    <a href="https://donatehub.chiapettadev.site/payment/chiapettaiago" target="_blank" class="btn btn-success btn-lg">
-                        <i class="fas fa-heart"></i> Fazer uma Doação
-                    </a>
-                </div>
-            </article>
+                <!-- Conteúdo do post -->
+                <div class="card-body p-4 p-lg-5">
+                    <h1 class="card-title text-primary mb-3">{{ post.title }}</h1>
+                    
+                    <div class="d-flex align-items-center mb-4">
+                        <img src="{{ url_for('static', filename='img/foto.jpg') }}" 
+                             alt="Autor" 
+                             class="rounded-circle me-2" 
+                             style="width:40px; height:40px; object-fit:cover;">
+                        <div>
+                            <div class="small text-muted">Por {{ post.user }}</div>
+                            <div class="small text-muted">{{ post.created_at }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="post-content">{{ post.content | safe }}</div>
 
-            <!-- Seção de Comentários -->
-            {% include 'comments.html' %}
-        </div>
-
-        <div class="col-md-4">
-            <div class="recent-posts">
-                <h3>Posts Recentes</h3>
-                {% for recent_post in recent_posts %}
-                <div class="card mb-3">
-                    {% if recent_post.main_image %}
-                    <img src="{{ url_for('static', filename='uploads/' + recent_post.main_image) }}" class="card-img-top" alt="{{ recent_post.title }}">
-                    {% endif %}
-                    <div class="card-body">
-                        <h5 class="card-title">{{ recent_post.title }}</h5>
-                        <p class="card-text">{{ recent_post.content[:100] | safe }}...</p>
-                        <a href="{{ url_for('post_view', post_id=recent_post.id) }}" class="btn btn-primary">Ler mais</a>
+                    <!-- Botão de Doação -->
+                    <div class="text-end my-4">
+                      <a href="https://www.paypal.com/donate?hosted_button_id=YOUR_BUTTON_ID" target="_blank" class="btn btn-outline-light">
+                        <i class="fas fa-hand-holding-dollar me-2"></i>Doar
+                      </a>
                     </div>
                 </div>
-                {% endfor %}
+            </div>
+            
+            <!-- Seção de comentários -->
+            <div class="glass-card">
+                <div class="card-body p-4">
+                    <h3 class="text-primary mb-4">Comentários</h3>
+                    
+                    <!-- Formulário de comentário -->
+                    {% if current_user.is_authenticated %}
+                    <form action="{{ url_for('add_comment', post_id=post.id) }}" method="POST" class="mb-4">
+                        <div class="mb-3">
+                            <textarea class="form-control" name="content" rows="3" placeholder="Escreva seu comentário..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Comentar</button>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <a href="{{ url_for('login') }}" class="alert-link">Faça login</a> para comentar neste post.
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Lista de comentários -->
+                    <div class="comments-list">
+                        {% if comments %}
+                            {% for comment in comments %}
+                                <div class="comment glass-card mb-3 animate-fade-in" style="animation-delay: {{ loop.index0 * 0.1 }}s">
+                                    <div class="card-body">
+                                        <div class="d-flex mb-2">
+                                            <div class="comment-avatar me-3">
+                                                <div class="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center" style="width: 40px; height: 40px;">
+                                                    {{ comment.user.username[0] | upper }}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-bold">{{ comment.user.username }}</h6>
+                                                <small class="text-muted">{{ comment.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                                            </div>
+                                        </div>
+                                        <p class="mb-0">{{ comment.content }}</p>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center text-muted py-4">
+                                <i class="far fa-comment-dots fa-3x mb-3"></i>
+                                <p>Seja o primeiro a comentar!</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Barra lateral -->
+        <div class="col-lg-4">
+            <!-- Sobre o autor -->
+            <div class="glass-card mb-4">
+                <div class="card-body p-4 text-center">
+                    <img src="{{ url_for('static', filename='img/foto.jpg') }}" 
+                         alt="Autor" 
+                         class="rounded-circle mb-3" 
+                         style="width:100px; height:100px; object-fit:cover;">
+                    <h5 class="card-title text-primary">Iago Filgueiras Chiapetta</h5>
+                    <p class="card-text small">Desenvolvedor Full Stack especialista em Python e Linux. Apaixonado por tecnologia e inovação.</p>
+                    <a href="#" class="btn btn-outline-primary btn-sm rounded-pill">Mais sobre mim</a>
+                </div>
+            </div>
+            
+            <!-- Posts recentes -->
+            <div class="glass-card mb-4">
+                <div class="card-body p-4">
+                    <h5 class="text-primary mb-3">Posts recentes</h5>
+                    <div class="list-group list-group-flush border-bottom">
+                        {% for rp in recent_posts %}
+                            <a href="{{ url_for('post_view', post_id=rp.id) }}" 
+                               class="list-group-item list-group-item-action bg-transparent d-flex align-items-center py-3 px-0 border-top">
+                                {% if rp.main_image %}
+                                    <div class="me-3" style="width:50px; height:50px; overflow:hidden; border-radius:5px;">
+                                        <img src="{{ url_for('static', filename='uploads/' ~ rp.main_image) }}" 
+                                             style="width:100%; height:100%; object-fit:cover;" 
+                                             alt="Imagem do post">
+                                    </div>
+                                {% endif %}
+                                <div>
+                                    <h6 class="mb-0">{{ rp.title }}</h6>
+                                    <small class="text-muted">{{ rp.created_at }}</small>
+                                </div>
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
-<script>
-  tinymce.init({
-    selector: 'textarea',
-    language: 'pt_BR',
-    plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
-    toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat',
-    setup(editor){ editor.on('change',()=> tinymce.triggerSave()) }
-  });
-</script>
 {% endblock %}

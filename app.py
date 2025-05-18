@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, flash, abort, Response
+from flask import Flask, render_template, render_template_string, request, redirect, url_for, flash, abort, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user, AnonymousUserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -178,6 +178,19 @@ def home():
 def all_posts():
     posts = Post.query.order_by(Post.created_at.desc()).all()
     return render_template('all_posts.html', posts=posts)
+
+@app.route('/posts_all')
+def posts_all():
+    # Lista posts publicados e agendados
+    fuso_sp = pytz.timezone('America/Sao_Paulo')
+    now = datetime.now(fuso_sp)
+    posts = Post.query.filter(
+        db.or_(
+            Post.is_published == True,
+            db.and_(Post.scheduled_for.isnot(None), Post.scheduled_for <= now)
+        )
+    ).order_by(Post.created_at.desc()).all()
+    return render_template('posts_list.html', posts=posts, current_user=current_user)
 
 @app.route('/post/<int:post_id>')
 def post_view(post_id):

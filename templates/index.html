@@ -2,10 +2,14 @@
 
 {% block content %}
 <section id="home" class="py-5">
-    <div class="container text-center">
-        <img src="{{ url_for('static', filename='img/foto.jpg') }}" alt="Sua Foto" class="img-fluid rounded-circle mb-3" style="max-width: 200px;">
+    <div class="container text-center animate-fade-in">
+        <img src="{{ url_for('static', filename='img/foto.jpg') }}" alt="Sua Foto" class="img-fluid rounded-circle mb-3" style="max-width: 200px; border: 4px solid rgba(255,255,255,0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
         <h1 class="display-4">Iago Filgueiras Chiapetta</h1>
         <p class="lead">Desenvolvedor Full Stack | Especialista em Python e Linux | Cursando Ciências da Computação em Unifeso</p>
+        <div class="mt-4">
+            <a href="#about" class="btn btn-light btn-lg rounded-pill px-4 me-2">Sobre Mim</a>
+            <a href="#projects" class="btn btn-outline-light btn-lg rounded-pill px-4">Meus Projetos</a>
+        </div>
     </div>
 </section>
 
@@ -13,10 +17,10 @@
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-lg-12">
-                <div class="card border-0 shadow-sm">
+                <div class="glass-card">
                     <div class="card-body p-4 p-md-5">
                         <!-- Cabeçalho -->
-                        <div class="text-center mb-4">
+                        <div class="text-center mb-4 animate-fade-in">
                             <h2 class="display-4 fw-bold text-primary">Sobre Mim</h2>
                             <hr class="mx-auto w-25 mb-4">
                         </div>
@@ -58,39 +62,41 @@
 
 <section id="skills" class="py-5">
     <div class="container">
-        <h2 class="text-center mb-4">Minhas Habilidades</h2>
+        <h2 class="text-center mb-4 text-primary">Minhas Habilidades</h2>
         <div class="row">
             {% for skill in skills %}
                 <div class="col-6 col-md-4 col-lg-3 mb-3">
-                    <div class="bg-dark text-white p-3 rounded text-center">{{ skill }}</div>
+                    <div class="skill-item text-center">{{ skill }}</div>
                 </div>
             {% endfor %}
         </div>
     </div>
 </section>
 
-<section id="projects" class="py-5 bg-light">
+<section id="projects" class="py-5">
     <div class="container">
-        <h2 class="text-center mb-4">Projetos Destacados</h2>
+        <h2 class="text-center mb-4 text-primary">Projetos Destacados</h2>
         <div class="row">
             <div class="col-md-6 mb-4">
-                <div class="card">
-                    <a href="https://meutesouro.site" target="_blank" class="card">
-                    <div class="card-body">
-                        <h5 class="card-title text-center">Meu Tesouro</h5>
-                        <p class="card-text text-center">Sistema financeiro que gerencia suas finanças de forma inteligente. Clique aqui e acesse agora mesmo.</p>
-                    </div>
-                </a>
+                <div class="glass-card h-100">
+                    <a href="https://meutesouro.site" target="_blank" class="text-decoration-none">
+                        <div class="card-body text-center p-5">
+                            <h3 class="card-title mb-3">Meu Tesouro</h3>
+                            <p class="card-text">Sistema financeiro que gerencia suas finanças de forma inteligente. Clique aqui e acesse agora mesmo.</p>
+                            <span class="btn btn-primary mt-3">Ver Projeto</span>
+                        </div>
+                    </a>
                 </div>
             </div>
             <div class="col-md-6 mb-4">
-                <div class="card">
-                    <a href="https://casamento.chiapettadev.site" target="_blank" class="card">
-                    <div class="card-body">
-                        <h5 class="card-title text-center">Projeto Álbum de Casamento</h5>
-                        <p class="card-text text-center">Projeto de um álbum de casamento com fotos e vídeos.</p>
-                    </div>
-                </a>
+                <div class="glass-card h-100">
+                    <a href="https://casamento.chiapettadev.site" target="_blank" class="text-decoration-none">
+                        <div class="card-body text-center p-5">
+                            <h3 class="card-title mb-3">Álbum de Casamento</h3>
+                            <p class="card-text">Projeto de um álbum de casamento com fotos e vídeos.</p>
+                            <span class="btn btn-primary mt-3">Ver Projeto</span>
+                        </div>
+                    </a>
                 </div>
             </div>
         </div>
@@ -98,24 +104,42 @@
 </section>
 
 <!-- Blog Recente -->
-<section id="blog" class="py-5 bg-light">
+<section id="blog" class="py-5">
     <div class="container">
-        <h2 class="text-center mb-4">Blog</h2>
+        <h2 class="text-center mb-4 text-primary">Blog</h2>
         <div class="row">
             {% for post in recent_posts %}
                 <div class="col-md-4 mb-4">
-                    <div class="card h-100">
+                    <div class="glass-card h-100">
                         {% if post['main_image'] %}
-                            <img src="{{ url_for('static', filename='uploads/' ~ post['main_image']) }}" class="card-img-top mb-3" style="height:200px; object-fit:cover;" alt="Imagem principal do post">
+                            <div class="card-img-container" style="height:200px; overflow:hidden;">
+                                <img src="{{ url_for('static', filename='uploads/' ~ post['main_image']) }}" 
+                                     class="card-img-top" 
+                                     style="height:100%; width:100%; object-fit:cover;" 
+                                     alt="Imagem principal do post">
+                            </div>
                         {% endif %}
-                        <div class="card-body">
-                            <h5 class="card-title">{{ post['title'] }}</h5>
-                            <p class="card-text">{{ post['content'][:100] | safe }}...</p>
-                            <a href="{{ url_for('post_view', post_id=post['id']) }}" class="btn btn-primary">Ler mais</a>
+                        <div class="card-body p-4">
+                            <h5 class="card-title mb-3">{{ post['title'] }}</h5>
+                            <p class="card-text text-muted">{{ post['content'][:100] | safe }}...</p>
+                            <div class="d-flex justify-content-between align-items-center mt-4">
+                                <a href="{{ url_for('post_view', post_id=post['id']) }}" class="btn btn-primary">
+                                    <i class="fas fa-book-open me-1"></i> Ler mais
+                                </a>
+                                <a href="https://www.paypal.com/donate?hosted_button_id=YOUR_BUTTON_ID" target="_blank" class="btn btn-outline-light btn-sm ms-2">
+                                    <i class="fas fa-hand-holding-dollar me-1"></i> Doar
+                                </a>
+                                <small class="text-muted">{{ post['created_at'] }}</small>
+                            </div>
                         </div>
                     </div>
                 </div>
             {% endfor %}
+        </div>
+        <div class="text-center mt-4">
+            <a href="{{ url_for('posts_all') }}" class="btn btn-outline-primary rounded-pill px-4">
+                Ver Todos os Posts <i class="fas fa-arrow-right ms-1"></i>
+            </a>
         </div>
     </div>
 </section>

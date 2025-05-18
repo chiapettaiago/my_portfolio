@@ -4,86 +4,222 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Chiapetta Dev - Programação e Tecnologia{% endblock %}</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="https://cdn.tiny.cloud/1/vzv83v6j3ph3tx55wbjhbuz9i0qsr8mhfhigw0k0kq9qqyhr/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
-    <link rel="apple-touch-icon" sizes="180x180" href="{{url_for('static', filename='img/apple-touch-icon.png') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{url_for('static', filename='img/favicon-32x32.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{url_for('static', filename='img/favicon-16x16.png') }}">
-    <link rel="manifest" href="{{ url_for('static', filename='img/site.webmanifest') }}">
+    <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- TinyMCE -->
+    <script src="https://cdn.tiny.cloud/1/vzv83v6j3ph3tx55wbjhbuz9i0qsr8mhfhigw0k0kq9qqyhr/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
+    <!-- Favicons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='img/favicon-16x16.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='img/site.webmanifest') }}">
+    <!-- Meta tags para SEO e compartilhamento social -->
+    <meta name="description" content="Portfólio e blog de Iago Chiapetta, desenvolvedor full stack especialista em Python e Linux">
+    <meta name="keywords" content="programação, desenvolvimento web, python, flask, linux">
+    <meta property="og:title" content="Chiapetta Dev - Programação e Tecnologia">
+    <meta property="og:description" content="Portfólio e blog de desenvolvimento web, programação e tecnologia">
+    <meta property="og:image" content="{{ url_for('static', filename='img/foto.jpg', _external=True) }}">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('home') }}">Chiapetta Dev</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">
+                <i class="fas fa-code me-2"></i>Chiapetta Dev
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}#home">Início</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}#about">Sobre</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}#skills">Habilidades</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}#projects">Projetos</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}#blog">Blog</a></li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('home') }}#home">
+                            <i class="fas fa-home me-1"></i>Início
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('home') }}#about">
+                            <i class="fas fa-user me-1"></i>Sobre
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('home') }}#skills">
+                            <i class="fas fa-code-branch me-1"></i>Habilidades
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('home') }}#projects">
+                            <i class="fas fa-project-diagram me-1"></i>Projetos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('home') }}#blog">
+                            <i class="fas fa-blog me-1"></i>Blog
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('posts_all') }}">
+                            <i class="fas fa-th-list me-1"></i>Todos os Posts
+                        </a>
+                    </li>
                     {% if current_user.is_authenticated %}
-                    {% if current_user.role == 'admin' %}
-                    <li class="nav-item" title="Usuário"><a class="nav-link" href="{{ url_for('all_posts') }}"><i class="fa-regular fa-user"></i></a></li>
-                    <li class="nav-item" title="Criar Novo Post"><a class="nav-link" href="{{ url_for('create') }}"><i class="fa-solid fa-plus"></i></a></li>
-                    {% endif %}
-                    <li class="nav-item" title="Logout"><a class="nav-link" href="{{ url_for('logout') }}"><i class="fa-solid fa-arrow-right-from-bracket"></i></a></li>
+                        {% if current_user.role == 'admin' %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('all_posts') }}" title="Gerenciar Posts">
+                                    <i class="fas fa-th-list me-1"></i>Posts
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('create') }}" title="Criar Novo Post">
+                                    <i class="fas fa-plus-circle me-1"></i>Novo
+                                </a>
+                            </li>
+                        {% endif %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('logout') }}" title="Sair">
+                                <i class="fas fa-sign-out-alt me-1"></i>Sair
+                            </a>
+                        </li>
                     {% else %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('login') }}">
+                                <i class="fas fa-sign-in-alt me-1"></i>Login
+                            </a>
+                        </li>
                     {% endif %}
                 </ul>
             </div>
         </div>
     </nav>
 
+    <!-- Conteúdo principal -->
     <main>
+        <!-- Flash messages -->
+        <div class="container mt-5 pt-3">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+        
         {% block content %}{% endblock %}
     </main>
 
-
-<script>
-  var url = 'https://cdn.waplus.io/waplus-crm/settings/ossembed.js';
-  var s = document.createElement('script');
-  s.type = 'text/javascript';
-  s.async = true;
-  s.src = url;
-  var options = {
-  "enabled": true,
-  "chatButtonSetting": {
-  "backgroundColor": "#16BE45",
-  "ctaText": "Entre em Contato",
-  "borderRadius": "8",
-  "marginLeft": "20",
-  "marginBottom": "20",
-  "marginRight": "20",
-  "position": "right",
-  "textColor": "#ffffff",
-  "phoneNumber": "+55 21 97294-0130",
-  "messageText": "Olá, preciso dos seus serviços!",
-  "trackClick": true
-  }
-  }
-  s.onload = function() {
-  CreateWhatsappBtn(options);
-  };
-  var x = document.getElementsByTagName('script')[0];
-  x.parentNode.insertBefore(s, x);
-  </script>
-
+    <!-- WhatsApp CRM Script -->
+    <script>
+      var url = 'https://cdn.waplus.io/waplus-crm/settings/ossembed.js';
+      var s = document.createElement('script');
+      s.type = 'text/javascript';
+      s.async = true;
+      s.src = url;
+      var options = {
+        "enabled": true,
+        "chatButtonSetting": {
+          "backgroundColor": "#16BE45",
+          "ctaText": "Entre em Contato",
+          "borderRadius": "8",
+          "marginLeft": "20",
+          "marginBottom": "20",
+          "marginRight": "20",
+          "position": "right",
+          "textColor": "#ffffff",
+          "phoneNumber": "+55 21 97294-0130",
+          "messageText": "Olá, preciso dos seus serviços!",
+          "trackClick": true
+        }
+      }
+      s.onload = function() {
+        CreateWhatsappBtn(options);
+      };
+      var x = document.getElementsByTagName('script')[0];
+      x.parentNode.insertBefore(s, x);
+    </script>
 
     <!-- Rodapé -->
-    <footer class="bg-dark text-white text-center py-3">
-        <p>&copy; 2025 Chiapetta Dev. Todos os direitos reservados.</p>
+    <footer class="py-4 mt-5">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-4 text-center text-md-start mb-3 mb-md-0">
+                    <h5 class="text-white mb-0">
+                        <i class="fas fa-code me-2"></i>Chiapetta Dev
+                    </h5>
+                </div>
+                <div class="col-md-4 text-center mb-3 mb-md-0">
+                    <div class="social-icons">
+                        <a href="https://github.com/chiapetta" class="text-white me-3" target="_blank" title="GitHub">
+                            <i class="fab fa-github fa-lg"></i>
+                        </a>
+                        <a href="https://linkedin.com/in/chiapetta" class="text-white me-3" target="_blank" title="LinkedIn">
+                            <i class="fab fa-linkedin fa-lg"></i>
+                        </a>
+                        <a href="https://instagram.com/" class="text-white" target="_blank" title="Instagram">
+                            <i class="fab fa-instagram fa-lg"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center text-md-end">
+                    <p class="text-white mb-0">&copy; 2025 Chiapetta Dev. Todos os direitos reservados.</p>
+                </div>
+            </div>
+        </div>
     </footer>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    <script src="https://kit.fontawesome.com/39df25bfda.js" crossorigin="anonymous"></script>
+    <script>
+        // Efeito parallax e detecção de rolagem para navbar
+        window.addEventListener('scroll', function() {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('navbar-scrolled');
+            } else {
+                navbar.classList.remove('navbar-scrolled');
+            }
+        });
+
+        // Inicializa TinyMCE se existir um textarea com o id 'editor'
+        document.addEventListener('DOMContentLoaded', function() {
+            if (document.getElementById('editor')) {
+                tinymce.init({
+                    selector: '#editor',
+                    plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
+                    toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat',
+                    height: 400
+                });
+            }
+
+            // Animação para elementos com a classe animate-fade-in
+            const animateElements = document.querySelectorAll('.animate-fade-in');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            });
+            
+            animateElements.forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+                observer.observe(el);
+            });
+        });
+    </script>
 </body>
 </html>
