@@ -13,6 +13,7 @@ import logging
 import json
 from collections import Counter
 from user_agents import parse
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Configurando logging
 logging.basicConfig(level=logging.DEBUG)
@@ -20,6 +21,8 @@ logger = logging.getLogger(__name__)
 
 # Configurações iniciais
 app = Flask(__name__)
+# Adiciona ProxyFix para confiar no cabeçalho X-Forwarded-For do proxy reverso
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 app.config['SECRET_KEY'] = 'sua_chave_secreta'
 
 # Configuração do MySQL usando variáveis de ambiente
