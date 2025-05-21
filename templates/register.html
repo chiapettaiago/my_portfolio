@@ -1,18 +1,108 @@
 {% extends "base.html" %}
 
+{% block title %}Criar Conta - Chiapetta Dev{% endblock %}
+
 {% block content %}
-<div class="container">
-    <h2>Registrar</h2>
-    <form method="post">
-        <div class="mb-3">
-            <label for="username" class="form-label">Usuário</label>
-            <input type="text" class="form-control" id="username" name="username" required>
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="glass-card p-4">
+                <h2 class="text-center text-primary mb-4">Criar uma Nova Conta</h2>
+                <p class="text-muted text-center mb-4">Preencha o formulário abaixo para se registrar no site</p>
+                
+                <form method="post" class="needs-validation" novalidate>
+                    <div class="mb-3">
+                        <label for="fullname" class="form-label">Nome Completo</label>
+                        <input type="text" class="form-control" id="fullname" name="fullname" required>
+                        <div class="invalid-feedback">
+                            Por favor, informe seu nome completo.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="email" class="form-label">E-mail</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                        <div class="invalid-feedback">
+                            Por favor, informe um e-mail válido.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Telefone</label>
+                        <input type="tel" class="form-control" id="phone" name="phone" placeholder="(99) 99999-9999">
+                        <div class="form-text">Opcional - Formato: (99) 99999-9999</div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Nome de Usuário</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                        <div class="invalid-feedback">
+                            Por favor, escolha um nome de usuário.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Senha</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                        <div class="invalid-feedback">
+                            Por favor, escolha uma senha.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Confirmar Senha</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                        <div class="invalid-feedback">
+                            As senhas não conferem.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="terms" required>
+                        <label class="form-check-label" for="terms">Concordo com os <a href="{{ url_for('terms') }}">Termos de Uso</a> e <a href="{{ url_for('privacy') }}">Política de Privacidade</a></label>
+                        <div class="invalid-feedback">
+                            Você deve concordar com os termos para continuar.
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100 mt-3">Criar Conta</button>
+                </form>
+                
+                <div class="text-center mt-4">
+                    <p class="mb-0">Já tem uma conta? <a href="{{ url_for('login') }}" class="text-primary">Faça login</a></p>
+                </div>
+            </div>
         </div>
-        <div class="mb-3">
-            <label for="password" class="form-label">Senha</label>
-            <input type="password" class="form-control" id="password" name="password" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Registrar</button>
-    </form>
+    </div>
 </div>
+
+<script>
+// Script para validação do formulário
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('.needs-validation');
+    const password = document.getElementById('password');
+    const confirmPassword = document.getElementById('confirm_password');
+    
+    // Valida se as senhas conferem
+    confirmPassword.addEventListener('input', function() {
+        if (this.value !== password.value) {
+            this.setCustomValidity('As senhas não conferem');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+    
+    // Validação do formulário
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity() || password.value !== confirmPassword.value) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        
+        form.classList.add('was-validated');
+    });
+});
+</script>
 {% endblock %}

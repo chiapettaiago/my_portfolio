@@ -93,6 +93,9 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
+    fullname = db.Column(db.String(100), nullable=True)
+    email = db.Column(db.String(120), unique=True, nullable=True)
+    phone = db.Column(db.String(20), nullable=True)
     role = db.Column(db.String(20), default='user')
 
 class Comment(db.Model):
@@ -445,15 +448,50 @@ def add_comment(slug):
 def register():
     if request.method == 'POST':
         username = request.form['username']
-        password = generate_password_hash(request.form['password'])
-        new_user = User(username=username, password=password, role='user')
+        fullname = request.form.get('fullname')
+        email = request.form.get('email')
+        phone = request.form.get('phone')
+        password = request.form['password']
+        confirm_password = request.form.get('confirm_password')
+        
+        # Validações
+        if not fullname or not email:
+            flash('Por favor, preencha todos os campos obrigatórios.', 'danger')
+            return render_template('register.html')
+            
+        if password != confirm_password:
+            flash('As senhas não conferem.', 'danger')
+            return render_template('register.html')
+        
+        # Verifica se o usuário ou e-mail já existem
+        existing_user = User.query.filter((User.username == username) | (User.email == email)).first()
+        if existing_user:
+            if existing_user.username == username:
+                flash('Esse nome de usuário já está sendo utilizado.', 'danger')
+            else:
+                flash('Esse e-mail já está registrado.', 'danger')
+            return render_template('register.html')
+        
+        # Cria o novo usuário
+        hashed_password = generate_password_hash(password)
+        new_user = User(
+            username=username, 
+            password=hashed_password, 
+            fullname=fullname, 
+            email=email, 
+            phone=phone,
+            role='user'
+        )
+        
         try:
-            db.session.add(new_user); db.session.commit()
-            flash('Registro ok! Faça login 😉', 'success')
+            db.session.add(new_user)
+            db.session.commit()
+            flash('Registro realizado com sucesso! Faça login para continuar. 😉', 'success')
             return redirect(url_for('login'))
-        except:
+        except Exception as e:
             db.session.rollback()
-            flash('Usuário já existe!', 'danger')
+            flash(f'Ocorreu um erro ao registrar seu usuário. Tente novamente.', 'danger')
+            
     return render_template('register.html')
 
 @app.route('/login', methods=['GET','POST'])
@@ -587,6 +625,14 @@ def analytics():
         start_date=start_date.strftime('%Y-%m-%d'),
         end_date=end_date.strftime('%Y-%m-%d')
     )
+
+@app.route('/terms')
+def terms():
+    return render_template('terms.html')
+
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
 
 if __name__ == '__main__':
     with app.app_context():

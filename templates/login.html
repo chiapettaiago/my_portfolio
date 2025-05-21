@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block title %}Login - Chiapetta Dev{% endblock %}
+
 {% block content %}
 <div class="container d-flex justify-content-center align-items-center" style="min-height: calc(100vh - 120px);">
   <div class="card shadow" style="width: 30rem;">
@@ -16,6 +18,10 @@
           </div>
           <button type="submit" class="btn btn-primary w-100">Entrar</button>
       </form>
+      
+      <div class="text-center mt-4">
+          <p class="mb-0">Não tem uma conta? <a href="{{ url_for('register') }}" class="text-primary">Registre-se</a></p>
+      </div>
     </div>
   </div>
 </div>
