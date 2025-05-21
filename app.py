@@ -106,6 +106,7 @@ class Comment(db.Model):
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
+    slug = db.Column(db.String(100), nullable=False, unique=True)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(pytz.timezone('America/Sao_Paulo')))
     scheduled_for = db.Column(db.DateTime, nullable=True)
@@ -143,6 +144,44 @@ def admin_required(f):
     return decorated
 
 # Helpers
+def slugify(text):
+    """Converte texto para slug URL-friendly."""
+    import re
+    import unicodedata
+    
+    # Converte para lowercase e remove acentos
+    text = unicodedata.normalize('NFKD', text).encode('ASCII', 'ignore').decode('utf-8')
+    text = text.lower()
+    
+    # Remove caracteres não alfanuméricos e substitui por hífen
+    text = re.sub(r'[^a-z0-9]+', '-', text)
+    
+    # Remove hífens duplicados e de início/fim
+    text = re.sub(r'-+', '-', text)
+    text = text.strip('-')
+    
+    return text
+    
+def get_unique_slug(title, post_id=None):
+    """Gera um slug único baseado no título do post."""
+    base_slug = slugify(title)
+    slug = base_slug
+    n = 1
+    
+    while True:
+        # Verifica se o slug existe (excluindo o post atual se estiver editando)
+        if post_id:
+            existing = Post.query.filter(Post.slug == slug, Post.id != post_id).first()
+        else:
+            existing = Post.query.filter_by(slug=slug).first()
+        
+        if not existing:
+            return slug
+            
+        # Se já existe, adiciona um número ao final
+        slug = f"{base_slug}-{n}"
+        n += 1
+
 def get_recent_posts():
     # Tenta buscar do cache primeiro
     cache_key = 'recent_posts'
@@ -166,6 +205,7 @@ def get_recent_posts():
     posts_data = [{
         'id': p.id,
         'title': p.title,
+        'slug': p.slug,
         'content': p.content,
         'main_image': p.main_image,
         'created_at': p.created_at.astimezone(fuso_sp).strftime('%d/%m/%Y %H:%M')
@@ -202,9 +242,9 @@ def track_page_view():
         ip=request.remote_addr,
         user_agent=user_agent_string[:255],  # Limita o tamanho para evitar erros
         browser=user_agent.browser.family,
-        device_type=('Mobile' if user_agent.is_mobile else 
-                    'Tablet' if user_agent.is_tablet else 
-                    'PC'),
+        device_type = ('Mobile' if user_agent.is_mobile else 
+                       'Tablet' if user_agent.is_tablet else 
+                       'PC'),
         referrer=request.referrer[:255] if request.referrer else None,
         user_id=current_user.id if current_user.is_authenticated else None
     )
@@ -239,20 +279,22 @@ def posts_all():
     ).order_by(Post.created_at.desc()).all()
     return render_template('posts_list.html', posts=posts, current_user=current_user)
 
-@app.route('/post/<int:post_id>')
-def post_view(post_id):
+@app.route('/post/<slug>')
+def post_view(slug):
+    # Busca o post pelo slug
+    post = Post.query.filter_by(slug=slug).first_or_404()
+    post_id = post.id
+    
     # Tenta buscar do cache primeiro
     cache_key = f'post_{post_id}'
     cached_post = mc.get(cache_key)
     cached_comments = mc.get(f'comments_{post_id}')
     
     if cached_post is None:
-        # Carrega o post completo
-        post = Post.query.get_or_404(post_id)
-        
         post_dict = {
             'id': post.id,
             'title': post.title,
+            'slug': post.slug,
             'content': post.content,
             'main_image': post.main_image,
             'created_at': post.created_at.strftime('%d/%m/%Y %H:%M'),
@@ -284,13 +326,23 @@ def create():
         scheduled_date = request.form.get('scheduled_date')
         scheduled_time = request.form.get('scheduled_time')
 
+        # Gerar um slug único para o post
+        slug = get_unique_slug(title)
+
         file = request.files.get('main_image')
         filename = None
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
-        new_post = Post(title=title, content=content, main_image=filename, is_published=False, user_id=current_user.id)
+        new_post = Post(
+            title=title, 
+            content=content, 
+            slug=slug,
+            main_image=filename, 
+            is_published=False, 
+            user_id=current_user.id
+        )
 
         if scheduled_date and scheduled_time:
             try:
@@ -316,8 +368,13 @@ def create():
 def edit_post(post_id):
     post = Post.query.get_or_404(post_id)
     if request.method == 'POST':
-        post.title = request.form['title']
+        title = request.form['title']
+        post.title = title
         post.content = request.form['content']
+
+        # Atualizar o slug apenas se o título mudou
+        if slugify(post.title) != slugify(title):
+            post.slug = get_unique_slug(title, post_id)
 
         file = request.files.get('main_image')
         if file and allowed_file(file.filename):
@@ -364,13 +421,16 @@ def delete_post(post_id):
     
     return redirect(url_for('all_posts'))
 
-@app.route('/post/<int:post_id>/comment', methods=['POST'])
+@app.route('/post/<slug>/comment', methods=['POST'])
 @login_required
-def add_comment(post_id):
+def add_comment(slug):
+    post = Post.query.filter_by(slug=slug).first_or_404()
+    post_id = post.id
+    
     content = request.form.get('content')
     if not content:
         flash('Comentário vazio não vale! 😅', 'danger')
-        return redirect(url_for('post_view', post_id=post_id))
+        return redirect(url_for('post_view', slug=slug))
     comment = Comment(post_id=post_id, user_id=current_user.id, content=content)
     db.session.add(comment)
     db.session.commit()
@@ -379,7 +439,7 @@ def add_comment(post_id):
     mc.delete(f'comments_{post_id}')
     
     flash('Comentário adicionado!', 'success')
-    return redirect(url_for('post_view', post_id=post_id))
+    return redirect(url_for('post_view', slug=slug))
 
 @app.route('/register', methods=['GET','POST'])
 def register():
@@ -424,6 +484,7 @@ def rss_feed():
         <description>Últimos posts</description>
         {% for p in posts %}
           <item><title>{{p.title}}</title>
+          <link>https://chiapettadev.site/post/{{p.slug}}</link>
           <description><![CDATA[{{p.content[:150]}}...]]></description>
           <pubDate>{{p.created_at.strftime('%a, %d %b %Y %H:%M:%S +0000')}}</pubDate>
           </item>

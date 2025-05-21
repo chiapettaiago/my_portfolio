@@ -123,7 +123,7 @@
                             <h5 class="card-title mb-3">{{ post['title'] }}</h5>
                             <p class="card-text text-muted">{{ post['content'][:200] | safe }}...</p>
                             <div class="d-flex justify-content-between align-items-center mt-4">
-                                <a href="{{ url_for('post_view', post_id=post['id']) }}" class="btn btn-primary">
+                                <a href="{{ url_for('post_view', slug=post['slug']) }}" class="btn btn-primary">
                                     <i class="fas fa-book-open me-1"></i> Ler mais
                                 </a>
                                 <small class="text-muted">{{ post['created_at'] }}</small>

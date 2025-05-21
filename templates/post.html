@@ -45,7 +45,7 @@
                     
                     <!-- Formulário de comentário -->
                     {% if current_user.is_authenticated %}
-                    <form action="{{ url_for('add_comment', post_id=post.id) }}" method="POST" class="mb-4">
+                    <form action="{{ url_for('add_comment', slug=post.slug) }}" method="POST" class="mb-4">
                         <div class="mb-3">
                             <textarea class="form-control" name="content" rows="3" placeholder="Escreva seu comentário..." required></textarea>
                         </div>
@@ -111,7 +111,7 @@
                     <h5 class="text-primary mb-3">Posts recentes</h5>
                     <div class="list-group list-group-flush border-bottom">
                         {% for rp in recent_posts %}
-                            <a href="{{ url_for('post_view', post_id=rp.id) }}" 
+                            <a href="{{ url_for('post_view', slug=rp['slug']) }}" 
                                class="list-group-item list-group-item-action bg-transparent d-flex align-items-center py-3 px-0 border-top">
                                 {% if rp.main_image %}
                                     <div class="me-3" style="width:50px; height:50px; overflow:hidden; border-radius:5px;">
