@@ -185,6 +185,17 @@ def get_unique_slug(title, post_id=None):
         slug = f"{base_slug}-{n}"
         n += 1
 
+def get_publication_date(post):
+    """Retorna a data de publicação do post (scheduled_for se disponível, ou created_at)."""
+    fuso_sp = pytz.timezone('America/Sao_Paulo')
+    
+    # Se tem data agendada, essa é a data de publicação
+    if post.scheduled_for:
+        return post.scheduled_for.astimezone(fuso_sp).strftime('%d/%m/%Y %H:%M')
+    
+    # Caso contrário, usa a data de criação
+    return post.created_at.astimezone(fuso_sp).strftime('%d/%m/%Y %H:%M')
+
 def get_recent_posts():
     # Tenta buscar do cache primeiro
     cache_key = 'recent_posts'
@@ -211,7 +222,7 @@ def get_recent_posts():
         'slug': p.slug,
         'content': p.content,
         'main_image': p.main_image,
-        'created_at': p.created_at.astimezone(fuso_sp).strftime('%d/%m/%Y %H:%M')
+        'created_at': get_publication_date(p)  # Agora usa a data de publicação
     } for p in posts]
     
     # Salva no cache
@@ -226,6 +237,9 @@ def publish_scheduled_posts():
         for p in pendentes:
             p.is_published = True
         db.session.commit()
+
+# Registra a função get_publication_date como função template
+app.jinja_env.globals.update(get_publication_date=get_publication_date)
 
 # Middleware para registrar acessos às páginas
 @app.before_request
@@ -311,7 +325,7 @@ def post_view(slug):
             'slug': post.slug,
             'content': post.content,
             'main_image': post.main_image,
-            'created_at': post.created_at.strftime('%d/%m/%Y %H:%M'),
+            'created_at': get_publication_date(post),  # Agora usa a data de publicação
             'scheduled_for': post.scheduled_for.strftime('%d/%m/%Y %H:%M') if post.scheduled_for else '',
             'user': post.user.username if post.user else 'Desconhecido'
         }
