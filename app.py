@@ -230,7 +230,18 @@ def publish_scheduled_posts():
 # Middleware para registrar acessos às páginas
 @app.before_request
 def track_page_view():
-    # Não registrar solicitações de recursos estáticos, favicon ou para a página de análise
+    # Verificar se é uma das páginas que devemos contabilizar:
+    # 1. Página principal (/)
+    # 2. Página de post individual (/post/slug)
+    # 3. Página de listagem de todos os posts (/posts_all)
+    valid_paths = ['/', '/posts_all']
+    is_post_page = request.path.startswith('/post/') and not request.path.endswith('/edit') and not request.path.endswith('/delete')
+    
+    # Contabilizar apenas se for uma das páginas desejadas
+    if not (request.path in valid_paths or is_post_page):
+        return
+    
+    # Ignorar recursos estáticos, favicon ou a própria página de analytics
     if (request.path.startswith('/static') or 
         request.path == '/favicon.ico' or 
         request.path == '/analytics'):

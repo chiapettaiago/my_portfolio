@@ -242,9 +242,18 @@ a:hover {
     box-shadow: 0 5px 15px rgba(255, 126, 95, 0.4);
 }
 
-.btn-light, .btn-outline-light {
-    color: var(--text-light) !important;
+.btn-light {
+    color: var(--primary-color) !important;
     font-weight: 600;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-color: transparent;
+}
+
+.btn-light:hover {
+    background-color: #ffffff;
+    color: var(--accent-color) !important;
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(255, 255, 255, 0.4);
 }
 
 .btn-outline-primary {
