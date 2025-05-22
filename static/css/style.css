@@ -9,9 +9,12 @@
     --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
     --text-light: #ffffff;
     --text-dark: #333333;
-    --text-primary: #f0f0ff;
+    --text-primary: #ffffff;
+    --text-muted: rgba(255, 255, 255, 0.75);
     --card-bg: rgba(255, 255, 255, 0.15);
 }
+
+/* Voltar para as definições originais e fazer apenas ajustes mínimos */
 
 body {
     padding-top: 56px;
@@ -64,19 +67,21 @@ section {
 h1, h2, h3, h4, h5, h6 {
     color: var(--text-light);
     font-weight: 600;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Ajuste para classe text-primary */
+.text-primary {
+    color: var(--text-primary) !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 p, span, div, li {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-.text-primary {
-    color: var(--text-primary) !important;
-}
-
 .text-muted {
-    color: rgba(255, 255, 255, 0.7) !important;
+    color: var(--text-muted) !important;
 }
 
 a {
@@ -99,6 +104,18 @@ a:hover {
 .navbar-scrolled {
     background-color: rgba(20, 20, 40, 0.95) !important;
     box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.navbar-nav .nav-link {
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-weight: 500;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.navbar-nav .nav-link:hover,
+.navbar-nav .nav-link:focus,
+.navbar-nav .active > .nav-link {
+    color: white !important;
 }
 
 #home {
@@ -136,14 +153,26 @@ a:hover {
     overflow: hidden;
     border: none;
     color: var(--text-light);
-}
-
-.card-body {
-    color: var(--text-light);
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
 }
 
 .card:hover {
     box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.card .form-label {
+    color: white;
+    font-weight: 500;
+}
+
+.card .card-title {
+    color: white;
+    font-weight: 600;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 /* Personalização para seção de blog */
@@ -214,7 +243,8 @@ a:hover {
 }
 
 .btn-light, .btn-outline-light {
-    color: var(--primary-color);
+    color: var(--text-light) !important;
+    font-weight: 600;
 }
 
 .btn-outline-primary {
@@ -225,6 +255,58 @@ a:hover {
 .btn-outline-primary:hover {
     background-color: var(--accent-color);
     color: white;
+}
+
+/* Melhorias para botões outline e secundários */
+.btn-outline-light {
+    color: white;
+    border-color: white;
+    background-color: rgba(255, 255, 255, 0.08);
+    font-weight: 500;
+}
+
+.btn-outline-light:hover {
+    background-color: white;
+    color: var(--primary-color);
+    box-shadow: 0 5px 15px rgba(255, 255, 255, 0.3);
+}
+
+.btn-outline-secondary {
+    color: white;
+    border-color: rgba(255, 255, 255, 0.7);
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.btn-outline-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    border-color: white;
+}
+
+/* Ajustar elementos com texto roxo para melhorar a visibilidade */
+a.text-primary, button.text-primary, .text-primary:not(.btn) {
+    color: var(--text-light) !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    font-weight: 600;
+}
+
+/* Melhorar visibilidade de elementos roxos em componentes Bootstrap */
+.badge-primary, .bg-primary {
+    background-color: var(--accent-color) !important;
+    color: var(--text-light) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Bordas roxas mais visíveis */
+.border-primary {
+    border-color: var(--accent-color) !important;
+}
+
+/* Adicionar contorno claro para destacar elementos roxos quando estiverem sobre o fundo roxo */
+.highlight-purple {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5), var(--primary-glow);
+    position: relative;
+    z-index: 1;
 }
 
 /* Seção de projetos */
@@ -284,63 +366,31 @@ a:hover {
     color: rgba(255, 255, 255, 0.9);
 }
 
-/* Correções para botões outline que ficam invisíveis */
-.btn-outline-light {
-    color: white;
-    border-color: white;
-    background-color: rgba(255, 255, 255, 0.1);
-    font-weight: 500;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
-.btn-outline-light:hover {
-    background-color: white;
-    color: var(--primary-color);
+/* Correção de textos na seção Sobre Mim */
+#about .card-body h2,
+#about .card-body h3,
+#about .card-body h4,
+#about .card-body p {
+    color: var(--text-dark) !important;
     text-shadow: none;
-    box-shadow: 0 5px 15px rgba(255, 255, 255, 0.3);
+    font-weight: 700;
 }
 
-/* Melhorias para página de login */
-.card {
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+#about .card-body .border-start h3 {
+    color: var(--text-dark) !important;
 }
 
-.card .form-label {
-    color: white;
-    font-weight: 500;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+#about .card-body .bg-white h4,
+#about .card-body .bg-white p {
+    color: var(--text-dark) !important;
 }
 
-.card .card-title {
-    color: white;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+#about p, #about li, #about .text-muted {
+    color: var(--text-dark) !important;
+    text-shadow: none !important;
 }
 
-/* Contraste melhorado para links e textos em cards */
-.card-body a:not(.btn) {
-    color: white;
-    font-weight: 500;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-}
-
-.card-body a:not(.btn):hover {
-    color: var(--accent-color);
-}
-
-/* Correção para botões em cards */
-.card .btn-primary {
-    background: var(--accent-gradient);
-    border: none;
-    color: white;
-    font-weight: 500;
-}
-
-/* Correção para formulários em cards */
+/* Melhorias para formulários em cards */
 .card .form-control {
     background-color: rgba(255, 255, 255, 0.15);
     border: 1px solid rgba(255, 255, 255, 0.3);
@@ -355,6 +405,25 @@ a:hover {
     background-color: rgba(255, 255, 255, 0.25);
     color: white;
     box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.25);
+}
+
+/* Ajustes para links em cards */
+.card-body a:not(.btn) {
+    color: var(--accent-color);
+    font-weight: 500;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+}
+
+.card-body a:not(.btn):hover {
+    color: white;
+}
+
+/* Badges mais visíveis */
+.badge {
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 /* Animações para elementos */
@@ -390,13 +459,13 @@ a:hover {
 /* Ajustes para formulários */
 .form-control, .form-select {
     background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     color: white;
 }
 
 .form-control:focus, .form-select:focus {
     background-color: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.4);
     color: white;
     box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.25);
 }
@@ -411,6 +480,17 @@ footer {
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     color: white;
+}
+
+footer a, 
+.bg-dark a {
+    color: var(--accent-color);
+    font-weight: 500;
+}
+
+footer a:hover,
+.bg-dark a:hover {
+    color: #fff;
 }
 
 /* Media queries para garantir responsividade */
@@ -434,21 +514,5 @@ footer {
     max-height: 400px;
     width: 400px;
     height: 600px;
-}
-
-/* Correção final: textos na seção Sobre Mim em preto */
-#about .card-body h2,
-#about .card-body h3,
-#about .card-body h4,
-#about .card-body p {
-    color: var(--text-dark) !important;
-    text-shadow: none !important;
-}
-#about .card-body .border-start h3 {
-    color: var(--text-dark) !important;
-}
-#about .card-body .bg-white h4,
-#about .card-body .bg-white p {
-    color: var(--text-dark) !important;
 }
 
