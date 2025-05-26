@@ -4,28 +4,26 @@
 
 {% block content %}
 <div class="container py-5">
-  <div class="glass-card">
+  <div class="glass-card text-white"> <!-- Adiciona text-white -->
     <div class="card-body p-4">
       <!-- Cabeçalho compacto com filtros integrados -->
       <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4">
         <h2 class="mb-3 mb-md-0"><i class="fas fa-chart-line me-2"></i>Analytics</h2>
-        
-        <form class="d-flex flex-column flex-md-row gap-2 align-items-center">
-          <div class="d-flex align-items-center">
+        <form class="d-flex flex-column flex-md-row gap-2 align-items-center w-100 w-md-auto">
+          <div class="d-flex align-items-center w-100 w-md-auto">
             <input type="date" class="form-control form-control-sm" id="start" name="start" value="{{ start_date }}">
             <span class="mx-2">até</span>
             <input type="date" class="form-control form-control-sm" id="end" name="end" value="{{ end_date }}">
           </div>
-          <button type="submit" class="btn btn-sm btn-primary">
+          <button type="submit" class="btn btn-sm btn-primary mt-2 mt-md-0">
             <i class="fas fa-filter me-1"></i>Filtrar
           </button>
         </form>
       </div>
-      
       <!-- Cards de métricas em linha compacta -->
       <div class="row g-3 mb-4">
-        <div class="col-md-4">
-          <div class="glass-card">
+        <div class="col-12 col-md-4">
+          <div class="glass-card h-100">
             <div class="card-body p-3 d-flex align-items-center">
               <span class="badge rounded-pill bg-primary bg-opacity-25 p-2 me-3">
                 <i class="fas fa-eye text-primary"></i>
@@ -37,9 +35,8 @@
             </div>
           </div>
         </div>
-        
-        <div class="col-md-4">
-          <div class="glass-card">
+        <div class="col-12 col-md-4">
+          <div class="glass-card h-100">
             <div class="card-body p-3 d-flex align-items-center">
               <span class="badge rounded-pill bg-success bg-opacity-25 p-2 me-3">
                 <i class="fas fa-users text-success"></i>
@@ -51,9 +48,8 @@
             </div>
           </div>
         </div>
-        
-        <div class="col-md-4">
-          <div class="glass-card">
+        <div class="col-12 col-md-4">
+          <div class="glass-card h-100">
             <div class="card-body p-3 d-flex align-items-center">
               <span class="badge rounded-pill bg-warning bg-opacity-25 p-2 me-3">
                 <i class="fas fa-percentage text-warning"></i>
@@ -67,31 +63,31 @@
           </div>
         </div>
       </div>
-      
       <!-- Nav tabs para organizar o conteúdo -->
-      <ul class="nav nav-tabs mb-3" id="analyticsTab" role="tablist">
-        <li class="nav-item" role="presentation">
-          <button class="nav-link active" id="traffic-tab" data-bs-toggle="tab" data-bs-target="#traffic" type="button" role="tab">
-            <i class="fas fa-chart-line me-1"></i>Tráfego
-          </button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="pages-tab" data-bs-toggle="tab" data-bs-target="#pages" type="button" role="tab">
-            <i class="fas fa-file-alt me-1"></i>Páginas
-          </button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="devices-tab" data-bs-toggle="tab" data-bs-target="#devices" type="button" role="tab">
-            <i class="fas fa-mobile-alt me-1"></i>Dispositivos
-          </button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary" type="button" role="tab">
-            <i class="fas fa-table me-1"></i>Resumo
-          </button>
-        </li>
-      </ul>
-      
+      <div class="overflow-auto mb-3" style="white-space:nowrap;">
+        <ul class="nav nav-tabs flex-nowrap" id="analyticsTab" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="traffic-tab" data-bs-toggle="tab" data-bs-target="#traffic" type="button" role="tab">
+              <i class="fas fa-chart-line me-1"></i>Tráfego
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="pages-tab" data-bs-toggle="tab" data-bs-target="#pages" type="button" role="tab">
+              <i class="fas fa-file-alt me-1"></i>Páginas
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="devices-tab" data-bs-toggle="tab" data-bs-target="#devices" type="button" role="tab">
+              <i class="fas fa-mobile-alt me-1"></i>Dispositivos
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary" type="button" role="tab">
+              <i class="fas fa-table me-1"></i>Resumo
+            </button>
+          </li>
+        </ul>
+      </div>
       <!-- Conteúdo das tabs -->
       <div class="tab-content" id="analyticsTabContent">
         <!-- Tab Tráfego -->
@@ -102,11 +98,10 @@
               <button type="button" class="btn btn-outline-primary" id="weeklyView">Semanal</button>
             </div>
           </div>
-          <div style="height: 300px;">
+          <div class="w-100" style="min-height:220px;max-height:350px;height:35vw;">
             <canvas id="viewsChart"></canvas>
           </div>
         </div>
-        
         <!-- Tab Páginas -->
         <div class="tab-pane fade" id="pages" role="tabpanel">
           <div class="d-flex justify-content-end mb-2">
@@ -114,31 +109,29 @@
               <i class="fas fa-chart-bar me-1"></i>Alternar visualização
             </button>
           </div>
-          <div style="height: 300px;">
+          <div class="w-100" style="min-height:220px;max-height:350px;height:35vw;">
             <canvas id="pagesChart"></canvas>
           </div>
         </div>
-        
         <!-- Tab Dispositivos -->
         <div class="tab-pane fade" id="devices" role="tabpanel">
-          <div class="row">
-            <div class="col-md-6">
-              <div style="height: 300px;">
+          <div class="row g-2">
+            <div class="col-12 col-md-6">
+              <div class="w-100" style="min-height:220px;max-height:350px;height:35vw;">
                 <canvas id="deviceChart"></canvas>
               </div>
             </div>
-            <div class="col-md-6">
-              <div style="height: 300px;">
+            <div class="col-12 col-md-6">
+              <div class="w-100" style="min-height:220px;max-height:350px;height:35vw;">
                 <canvas id="browserChart"></canvas>
               </div>
             </div>
           </div>
         </div>
-        
         <!-- Tab Resumo -->
         <div class="tab-pane fade" id="summary" role="tabpanel">
           <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table table-hover align-middle">
               <thead>
                 <tr>
                   <th>Métrica</th>
@@ -147,15 +140,12 @@
                 </tr>
               </thead>
               <tbody>
-                <!-- Média de visualizações -->
                 {% set avg_views_per_day = (total_views / (days_json|length)) if days_json|length > 0 else 0 %}
                 <tr>
                   <td>Média diária de visitas</td>
                   <td>{{ "%.1f"|format(avg_views_per_day) }}</td>
                   <td>-</td>
                 </tr>
-                
-                <!-- Top dispositivo -->
                 {% if device_labels|length > 0 %}
                 {% set top_device_index = device_counts.index(device_counts|max) %}
                 {% set top_device = device_labels[top_device_index] %}
@@ -166,8 +156,6 @@
                   <td>{{ "%.1f"|format(top_device_percent) }}%</td>
                 </tr>
                 {% endif %}
-                
-                <!-- Top navegador -->
                 {% if browser_labels|length > 0 %}
                 {% set top_browser_index = browser_counts.index(browser_counts|max) %}
                 {% set top_browser = browser_labels[top_browser_index] %}
@@ -186,10 +174,8 @@
     </div>
   </div>
 </div>
-
 <!-- Importar Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     // Dados para gráficos
@@ -226,6 +212,10 @@
       gradient.addColorStop(1, endColor);
       return gradient;
     }
+
+    // Configurações globais para todos os gráficos - textos brancos
+    Chart.defaults.color = '#FFFFFF';
+    Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.2)';
     
     // Configurar gráfico de visualizações
     const viewsCtx = document.getElementById('viewsChart').getContext('2d');
@@ -252,12 +242,37 @@
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: false }
+          legend: { 
+            display: false,
+            labels: { 
+              color: '#FFFFFF',
+              font: {
+                weight: 'bold'
+              }
+            }
+          },
+          title: {
+            color: '#FFFFFF'
+          }
         },
         scales: {
           y: {
             beginAtZero: true,
-            ticks: { stepSize: 1 }
+            ticks: { 
+              stepSize: 1,
+              color: '#FFFFFF'
+            },
+            grid: {
+              color: 'rgba(255, 255, 255, 0.1)'
+            }
+          },
+          x: {
+            ticks: { 
+              color: '#FFFFFF' 
+            },
+            grid: {
+              color: 'rgba(255, 255, 255, 0.1)'
+            }
           }
         }
       }
@@ -283,7 +298,32 @@
         maintainAspectRatio: false,
         indexAxis: 'y',
         plugins: {
-          legend: { display: false }
+          legend: { 
+            display: false,
+            labels: { 
+              color: '#FFFFFF',
+              font: {
+                weight: 'bold'
+              }
+            }
+          },
+          title: {
+            color: '#FFFFFF'
+          }
+        },
+        scales: {
+          y: {
+            ticks: { color: '#FFFFFF' },
+            grid: {
+              color: 'rgba(255, 255, 255, 0.1)'
+            }
+          },
+          x: {
+            ticks: { color: '#FFFFFF' },
+            grid: {
+              color: 'rgba(255, 255, 255, 0.1)'
+            }
+          }
         }
       }
     });
@@ -307,12 +347,22 @@
         plugins: {
           legend: {
             position: 'right',
-            labels: { boxWidth: 10 }
+            labels: { 
+              color: '#FFFFFF',
+              boxWidth: 10,
+              font: {
+                weight: 'bold'
+              }
+            }
           },
           title: {
             display: true,
             text: 'Dispositivos',
-            position: 'top'
+            position: 'top',
+            color: '#FFFFFF',
+            font: {
+              weight: 'bold'
+            }
           }
         }
       }
@@ -337,12 +387,22 @@
         plugins: {
           legend: {
             position: 'right',
-            labels: { boxWidth: 10 }
+            labels: { 
+              color: '#FFFFFF',
+              boxWidth: 10,
+              font: {
+                weight: 'bold'
+              }
+            }
           },
           title: {
             display: true,
             text: 'Navegadores',
-            position: 'top'
+            position: 'top',
+            color: '#FFFFFF',
+            font: {
+              weight: 'bold'
+            }
           }
         }
       }

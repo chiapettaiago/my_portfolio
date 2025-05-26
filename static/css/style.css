@@ -502,6 +502,23 @@ footer a:hover,
     color: #fff;
 }
 
+/* Torna o texto e ícones do item ativo do menu de abas pretos para contraste */
+.nav-tabs .nav-link.active,
+.nav-tabs .nav-link.active i {
+    color: #222 !important;
+    background-color: #fff !important;
+    border-color: #dee2e6 #dee2e6 #fff !important;
+    font-weight: 600;
+    text-shadow: none;
+}
+
+/* Garante que o texto da tab de resumo permaneça escuro sobre fundo branco */
+#analyticsTabContent #summary,
+#analyticsTabContent #summary * {
+    color: #222 !important;
+    text-shadow: none !important;
+}
+
 /* Media queries para garantir responsividade */
 @media (max-width: 768px) {
     section {
@@ -523,5 +540,30 @@ footer a:hover,
     max-height: 400px;
     width: 400px;
     height: 600px;
+}
+
+/* Força todos os textos dentro da card principal analytics a ficarem brancos */
+.glass-card.text-white, .glass-card.text-white * {
+    color: #fff !important;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+/* Força legendas, títulos e labels dos gráficos Chart.js a ficarem brancos */
+.glass-card.text-white .chartjs-render-monitor ~ .chartjs-legend,
+.glass-card.text-white .chartjs-legend,
+.glass-card.text-white .chartjs-legend li,
+.glass-card.text-white .chartjs-legend span,
+.glass-card.text-white .chartjs-legend text {
+    color: #fff !important;
+    fill: #fff !important;
+}
+
+/* Força os labels dos eixos dos gráficos Chart.js a ficarem brancos */
+.glass-card.text-white .chartjs-render-monitor ~ .chartjs-legend,
+.glass-card.text-white .chartjs-render-monitor ~ .chartjs-legend *,
+.glass-card.text-white .chartjs-render-monitor ~ .chartjs-legend text,
+.glass-card.text-white .chartjs-render-monitor ~ .chartjs-legend tspan {
+    color: #fff !important;
+    fill: #fff !important;
 }
 
