@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}PowerShell - Sistema Escuro{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow border-0 text-white">
+                <div class="card-header bg-dark text-white">
+                    <h2><i class="fas fa-terminal me-2"></i>PowerShell - Modo Escuro do Sistema</h2>
+                    <p class="mb-0">Scripts para configurar o Windows em modo escuro e permitir acesso remoto</p>
+                </div>
+                <div class="card-body bg-dark text-white">
+                    <!-- Aba de navegação -->
+                    <ul class="nav nav-tabs" id="powershellTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="dark-mode-tab" data-bs-toggle="tab" data-bs-target="#dark-mode" type="button" role="tab">
+                                <i class="fas fa-moon me-1"></i>Modo Escuro
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="remote-access-tab" data-bs-toggle="tab" data-bs-target="#remote-access" type="button" role="tab">
+                                <i class="fas fa-satellite-dish me-1"></i>Acesso Remoto
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="complete-setup-tab" data-bs-toggle="tab" data-bs-target="#complete-setup" type="button" role="tab">
+                                <i class="fas fa-cog me-1"></i>Setup Completo
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- Conteúdo das abas -->
+                    <div class="tab-content pt-4" id="powershellTabsContent">
+                        <!-- Aba Modo Escuro -->
+                        <div class="tab-pane fade show active" id="dark-mode" role="tabpanel">
+                            <h4><i class="fas fa-moon text-primary me-2"></i>Ativar Modo Escuro do Windows</h4>
+                            <p class="text-light">Este script configura o Windows para usar tema escuro em todo o sistema.</p>
+                            
+                            <div class="code-container">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <small class="text-muted">PowerShell (Executar como Administrador)</small>
+                                    <button class="btn btn-sm btn-outline-light copy-btn" data-clipboard-target="#dark-mode-script">
+                                        <i class="fas fa-copy me-1"></i>Copiar
+                                    </button>
+                                </div>
+                                <pre id="dark-mode-script" class="bg-black text-light p-3 rounded border"><code># Script para ativar modo escuro no Windows
+# Execute como Administrador
+
+# Ativar tema escuro do sistema
+Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Value 0
+
+# Ativar tema escuro dos apps
+Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Value 0
+
+# Forçar atualização das configurações
+rundll32.exe user32.dll,UpdatePerUserSystemParameters
+
+Write-Host "Modo escuro ativado com sucesso!" -ForegroundColor Green
+Write-Host "Pode ser necessário reiniciar algumas aplicações para aplicar as mudanças." -ForegroundColor Yellow</code></pre>
+                            </div>
+                        </div>
+
+                        <!-- Aba Acesso Remoto -->
+                        <div class="tab-pane fade" id="remote-access" role="tabpanel">
+                            <h4><i class="fas fa-satellite-dish text-success me-2"></i>Habilitar Acesso Remoto</h4>
+                            <p class="text-light">Configure o Windows para permitir conexões remotas via RDP e WinRM.</p>
+                            
+                            <div class="code-container">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <small class="text-muted">PowerShell (Executar como Administrador)</small>
+                                    <button class="btn btn-sm btn-outline-light copy-btn" data-clipboard-target="#remote-access-script">
+                                        <i class="fas fa-copy me-1"></i>Copiar
+                                    </button>
+                                </div>
+                                <pre id="remote-access-script" class="bg-black text-light p-3 rounded border"><code># Script para habilitar acesso remoto no Windows
+# Execute como Administrador
+
+# Habilitar Remote Desktop (RDP)
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
+
+# Habilitar RDP no firewall
+Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+
+# Habilitar WinRM para PowerShell remoto
+Enable-PSRemoting -Force
+
+# Configurar WinRM para aceitar conexões
+Set-Item WSMan:\localhost\Client\TrustedHosts -Value "*" -Force
+
+# Reiniciar serviços necessários
+Restart-Service -Name "TermService" -Force
+Restart-Service -Name "WinRM" -Force
+
+# Mostrar informações de rede
+Write-Host "=== Informações de Rede ===" -ForegroundColor Cyan
+Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.IPAddress -ne "127.0.0.1"} | Select-Object IPAddress, InterfaceAlias
+
+Write-Host "`nAcesso remoto configurado com sucesso!" -ForegroundColor Green
+Write-Host "RDP Port: 3389" -ForegroundColor Yellow
+Write-Host "WinRM Port: 5985 (HTTP) / 5986 (HTTPS)" -ForegroundColor Yellow</code></pre>
+                            </div>
+                        </div>
+
+                        <!-- Aba Setup Completo -->
+                        <div class="tab-pane fade" id="complete-setup" role="tabpanel">
+                            <h4><i class="fas fa-cog text-warning me-2"></i>Setup Completo</h4>
+                            <p class="text-light">Script completo que ativa modo escuro e configura acesso remoto.</p>
+                            
+                            <div class="code-container">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <small class="text-muted">PowerShell (Executar como Administrador)</small>
+                                    <button class="btn btn-sm btn-outline-light copy-btn" data-clipboard-target="#complete-setup-script">
+                                        <i class="fas fa-copy me-1"></i>Copiar
+                                    </button>
+                                </div>
+                                <pre id="complete-setup-script" class="bg-black text-light p-3 rounded border"><code># Script completo: Modo Escuro + Acesso Remoto
+# Execute como Administrador
+
+Write-Host "=== Configurando Sistema Escuro + Acesso Remoto ===" -ForegroundColor Cyan
+
+# =====================================
+# 1. CONFIGURAR MODO ESCURO
+# =====================================
+Write-Host "`n[1/3] Configurando modo escuro..." -ForegroundColor Blue
+
+# Ativar tema escuro do sistema
+Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Value 0
+
+# Ativar tema escuro dos apps
+Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Value 0
+
+# Forçar atualização das configurações
+rundll32.exe user32.dll,UpdatePerUserSystemParameters
+
+Write-Host "✓ Modo escuro ativado!" -ForegroundColor Green
+
+# =====================================
+# 2. CONFIGURAR ACESSO REMOTO
+# =====================================
+Write-Host "`n[2/3] Configurando acesso remoto..." -ForegroundColor Blue
+
+# Habilitar Remote Desktop (RDP)
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
+
+# Habilitar RDP no firewall
+Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+
+# Habilitar WinRM para PowerShell remoto
+Enable-PSRemoting -Force
+
+# Configurar WinRM para aceitar conexões
+Set-Item WSMan:\localhost\Client\TrustedHosts -Value "*" -Force
+
+# Reiniciar serviços necessários
+Restart-Service -Name "TermService" -Force
+Restart-Service -Name "WinRM" -Force
+
+Write-Host "✓ Acesso remoto configurado!" -ForegroundColor Green
+
+# =====================================
+# 3. INFORMAÇÕES DO SISTEMA
+# =====================================
+Write-Host "`n[3/3] Informações do sistema:" -ForegroundColor Blue
+
+# Mostrar informações de rede
+Write-Host "`n=== IPs Disponíveis ===" -ForegroundColor Yellow
+Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.IPAddress -ne "127.0.0.1"} | Select-Object IPAddress, InterfaceAlias | Format-Table
+
+# Mostrar usuário atual
+Write-Host "Usuário atual: $env:USERNAME" -ForegroundColor Yellow
+
+# Mostrar nome do computador
+Write-Host "Nome do computador: $env:COMPUTERNAME" -ForegroundColor Yellow
+
+Write-Host "`n=== SETUP CONCLUÍDO! ===" -ForegroundColor Green
+Write-Host "Portas de acesso:" -ForegroundColor Cyan
+Write-Host "• RDP: 3389" -ForegroundColor White
+Write-Host "• WinRM HTTP: 5985" -ForegroundColor White
+Write-Host "• WinRM HTTPS: 5986" -ForegroundColor White
+Write-Host "`nPara conectar via RDP: mstsc /v:[IP_ADDRESS]" -ForegroundColor Cyan
+Write-Host "Para PowerShell remoto: Enter-PSSession -ComputerName [IP_ADDRESS] -Credential [USERNAME]" -ForegroundColor Cyan</code></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Instruções de uso -->
+                    <div class="alert alert-info mt-4" role="alert">
+                        <h5><i class="fas fa-info-circle me-2"></i>Como usar:</h5>
+                        <ol class="mb-0">
+                            <li>Copie o script desejado clicando no botão "Copiar"</li>
+                            <li>Abra o PowerShell como <strong>Administrador</strong></li>
+                            <li>Cole e execute o script</li>
+                            <li>Aguarde a conclusão e siga as instruções exibidas</li>
+                        </ol>
+                    </div>
+
+                    <!-- Avisos de segurança -->
+                    <div class="alert alert-warning mt-3" role="alert">
+                        <h5><i class="fas fa-exclamation-triangle me-2"></i>Avisos importantes:</h5>
+                        <ul class="mb-0">
+                            <li>Execute sempre como <strong>Administrador</strong></li>
+                            <li>Certifique-se de ter backup antes de fazer alterações no sistema</li>
+                            <li>O acesso remoto pode representar riscos de segurança - use apenas em redes confiáveis</li>
+                            <li>Algumas mudanças podem requerer reinicialização do sistema</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.11/clipboard.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar clipboard.js
+    new ClipboardJS('.copy-btn');
+    
+    // Feedback visual para cópia
+    document.querySelectorAll('.copy-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-check me-1"></i>Copiado!';
+            this.classList.add('btn-success');
+            this.classList.remove('btn-outline-light');
+            
+            setTimeout(() => {
+                this.innerHTML = originalText;
+                this.classList.remove('btn-success');
+                this.classList.add('btn-outline-light');
+            }, 2000);
+        });
+    });
+});
+</script>
+{% endblock %}
