@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import Flask, render_template, render_template_string, request, redirect, url_for, flash, abort, Response
+from flask import Flask, render_template, render_template_string, request, redirect, url_for, flash, abort, Response, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user, AnonymousUserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -11,6 +11,8 @@ import pymysql
 import memcache
 import logging
 import json
+import uuid
+import subprocess
 from collections import Counter
 from user_agents import parse
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -130,6 +132,18 @@ class PageView(db.Model):
     referrer = db.Column(db.String(255), nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    
+# Modelo para scripts PowerShell temporários
+class PowerShellScript(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    token = db.Column(db.String(64), unique=True, nullable=False)
+    script = db.Column(db.Text, nullable=False)
+    description = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    access_count = db.Column(db.Integer, default=0)
+    last_accessed = db.Column(db.DateTime, nullable=True)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -663,6 +677,90 @@ def privacy():
 @admin_required
 def powershell():
     return render_template('powershell.html')
+
+# Função removida - não permite mais criar scripts personalizados
+
+@app.route('/ps/<token>')
+def access_ps_script(token):
+    # Verificar se é o token especial para modo escuro
+    if token == 'dark-mode':
+        # Script de modo escuro fixo
+        dark_mode_script = """# Script para ativar modo escuro no Windows
+# Execute como Administrador
+
+# Ativar tema escuro do sistema
+Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Value 0
+
+# Ativar tema escuro dos apps
+Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Value 0
+
+# Forçar atualização das configurações
+rundll32.exe user32.dll,UpdatePerUserSystemParameters
+
+Write-Host "Modo escuro ativado com sucesso!" -ForegroundColor Green
+Write-Host "Pode ser necessário reiniciar algumas aplicações para aplicar as mudanças." -ForegroundColor Yellow
+"""
+        # Registrar o acesso (opcional)
+        try:
+            # Buscar ou criar um registro para este script fixo
+            script = PowerShellScript.query.filter_by(token='dark-mode').first()
+            if not script:
+                # Criar um registro permanente para o script de modo escuro
+                script = PowerShellScript(
+                    token='dark-mode',
+                    script=dark_mode_script,
+                    description='Script para ativar modo escuro no Windows',
+                    expires_at=datetime.now() + timedelta(days=365*10),  # 10 anos (praticamente permanente)
+                    created_by=1  # Considerando que o ID 1 é o admin
+                )
+                db.session.add(script)
+            
+            # Atualizar contadores
+            script.access_count += 1
+            script.last_accessed = datetime.now()
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"Erro ao registrar acesso ao script de modo escuro: {str(e)}")
+        
+        # Retornar o script como texto puro
+        return Response(dark_mode_script, mimetype='text/plain')
+    
+    # Para outros tokens, buscar no banco de dados (mantido para compatibilidade)
+    script = PowerShellScript.query.filter_by(token=token).first()
+    
+    # Verificar se o script existe
+    if not script:
+        abort(404)
+    
+    # Verificar se o script não expirou
+    if script.expires_at < datetime.now():
+        return "Este script expirou", 410
+    
+    # Atualizar contadores
+    script.access_count += 1
+    script.last_accessed = datetime.now()
+    db.session.commit()
+    
+    # Retornar o script como texto puro (para ser executado diretamente)
+    return Response(script.script, mimetype='text/plain')
+
+@app.route('/powershell/list')
+@admin_required
+def list_ps_scripts():
+    scripts = PowerShellScript.query.filter_by(created_by=current_user.id).order_by(PowerShellScript.created_at.desc()).all()
+    
+    scripts_data = [{
+        'id': s.id,
+        'token': s.token,
+        'description': s.description,
+        'created_at': s.created_at.strftime('%d/%m/%Y %H:%M'),
+        'expires_at': s.expires_at.strftime('%d/%m/%Y %H:%M'),
+        'access_count': s.access_count,
+        'last_accessed': s.last_accessed.strftime('%d/%m/%Y %H:%M') if s.last_accessed else 'Nunca',
+        'active': s.expires_at > datetime.now()
+    } for s in scripts]
+    
+    return jsonify({'scripts': scripts_data})
 
 if __name__ == '__main__':
     with app.app_context():

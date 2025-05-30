@@ -11,8 +11,7 @@
                     <h2><i class="fas fa-terminal me-2"></i>PowerShell - Modo Escuro do Sistema</h2>
                     <p class="mb-0">Scripts para configurar o Windows em modo escuro e permitir acesso remoto</p>
                 </div>
-                <div class="card-body bg-dark text-white">
-                    <!-- Aba de navegação -->
+                <div class="card-body bg-dark text-white">                    <!-- Aba de navegação -->
                     <ul class="nav nav-tabs" id="powershellTabs" role="tablist">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="dark-mode-tab" data-bs-toggle="tab" data-bs-target="#dark-mode" type="button" role="tab">
@@ -27,6 +26,10 @@
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="complete-setup-tab" data-bs-toggle="tab" data-bs-target="#complete-setup" type="button" role="tab">
                                 <i class="fas fa-cog me-1"></i>Setup Completo
+                            </button>
+                        </li>                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="remote-link-tab" data-bs-toggle="tab" data-bs-target="#remote-link" type="button" role="tab">
+                                <i class="fas fa-link me-1"></i>Link Público
                             </button>
                         </li>
                     </ul>
@@ -181,6 +184,57 @@ Write-Host "• WinRM HTTP: 5985" -ForegroundColor White
 Write-Host "• WinRM HTTPS: 5986" -ForegroundColor White
 Write-Host "`nPara conectar via RDP: mstsc /v:[IP_ADDRESS]" -ForegroundColor Cyan
 Write-Host "Para PowerShell remoto: Enter-PSSession -ComputerName [IP_ADDRESS] -Credential [USERNAME]" -ForegroundColor Cyan</code></pre>
+                            </div>                        </div>
+                          <!-- Aba Link Público -->
+                        <div class="tab-pane fade" id="remote-link" role="tabpanel">
+                            <h4><i class="fas fa-link text-info me-2"></i>Link Público para Script Modo Escuro</h4>
+                            <p class="text-light">Use o link abaixo para acessar diretamente o script de Modo Escuro a partir de qualquer computador.</p>
+                            
+                            <div class="alert alert-info">
+                                <h5><i class="fas fa-info-circle me-2"></i>Sobre o Link Público</h5>
+                                <p>Este link permite compartilhar o script de Modo Escuro com qualquer pessoa. Basta usar o comando abaixo no PowerShell para executar o script remotamente.</p>
+                            </div>
+                            
+                            <div class="card bg-dark border-secondary mb-3">
+                                <div class="card-header bg-dark border-secondary">
+                                    <h5 class="mb-0"><i class="fas fa-terminal me-2"></i>Comando para Acesso Remoto</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-light">Execute este comando em qualquer PowerShell para baixar e aplicar o Modo Escuro:</p>
+                                    
+                                    <div class="position-relative">
+                                        <pre id="darkModeCommand" class="bg-black text-light p-3 rounded border"><code>iex (Invoke-WebRequest -Uri "https://chiapettadev.site/ps/dark-mode" -UseBasicParsing).Content</code></pre>
+                                        <button class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-2 copy-command-btn" data-clipboard-target="#darkModeCommand">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card bg-dark border-secondary mb-4">
+                                <div class="card-header bg-dark border-secondary">
+                                    <h5 class="mb-0"><i class="fas fa-share-alt me-2"></i>Compartilhar Link</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-light">Compartilhe este link direto para o script:</p>
+                                    
+                                    <div class="input-group mb-3">
+                                        <input type="text" id="publicLinkInput" class="form-control bg-dark text-light" readonly value="https://chiapettadev.site/ps/dark-mode">
+                                        <button class="btn btn-outline-light copy-link-btn" type="button" data-clipboard-target="#publicLinkInput">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <strong>Benefício:</strong> Ao compartilhar este link, você ajuda outras pessoas a configurarem facilmente o modo escuro em seus sistemas Windows.
+                            </div>
+                            
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Nota:</strong> O script de modo escuro é seguro e apenas altera as configurações visuais do Windows.
                             </div>
                         </div>
                     </div>
@@ -218,19 +272,25 @@ Write-Host "Para PowerShell remoto: Enter-PSSession -ComputerName [IP_ADDRESS] -
 document.addEventListener('DOMContentLoaded', function() {
     // Inicializar clipboard.js
     new ClipboardJS('.copy-btn');
+    new ClipboardJS('.copy-link-btn');
+    new ClipboardJS('.copy-command-btn');
     
     // Feedback visual para cópia
-    document.querySelectorAll('.copy-btn').forEach(function(btn) {
+    document.querySelectorAll('.copy-btn, .copy-link-btn, .copy-command-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
             const originalText = this.innerHTML;
             this.innerHTML = '<i class="fas fa-check me-1"></i>Copiado!';
-            this.classList.add('btn-success');
-            this.classList.remove('btn-outline-light');
+            if (!this.classList.contains('btn-sm')) {
+                this.classList.add('btn-success');
+                this.classList.remove('btn-outline-light');
+            }
             
             setTimeout(() => {
                 this.innerHTML = originalText;
-                this.classList.remove('btn-success');
-                this.classList.add('btn-outline-light');
+                if (!this.classList.contains('btn-sm')) {
+                    this.classList.remove('btn-success');
+                    this.classList.add('btn-outline-light');
+                }
             }, 2000);
         });
     });
