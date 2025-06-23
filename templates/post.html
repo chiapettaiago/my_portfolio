@@ -33,8 +33,31 @@
                         </div>
                     </div>
                     
-                    <div class="post-content">{{ post.content | safe }}</div>
+                    <div class="post-content">
+                        {{ post.content | safe }}
+                    </div>
 
+                    <!-- Informações adicionais -->
+                    <div class="mt-4 pt-3 border-top">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="small text-muted">
+                                <i class="fas fa-tag me-1"></i> Tecnologia
+                            </div>
+                            <div class="small d-flex align-items-center">
+                                <!-- AddToAny share buttons -->
+                                <div class="a2a_kit a2a_default_style a2a_kit_size_32 d-inline-block me-2">
+                                    <a class="a2a_button_facebook" title="Compartilhar no Facebook"></a>
+                                    <a class="a2a_button_twitter" title="Compartilhar no Twitter"></a>
+                                    <a class="a2a_button_whatsapp" title="Compartilhar no WhatsApp"></a>
+                                    <a class="a2a_button_linkedin" title="Compartilhar no LinkedIn"></a>
+                                    <a class="a2a_button_copy_link" title="Copiar link"></a>
+                                </div>
+                                <a href="#comments" class="text-decoration-none">
+                                    <i class="fas fa-comment me-1"></i> Comentários
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -132,5 +155,7 @@
         </div>
     </div>
 </div>
+
+<script async src="https://static.addtoany.com/menu/page.js"></script>
 {% endblock %}
 
