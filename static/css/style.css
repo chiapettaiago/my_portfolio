@@ -567,3 +567,122 @@ footer a:hover,
     fill: #fff !important;
 }
 
+/* Estilos do Painel de Administração */
+#admin-panel {
+    background: var(--gradient-bg);
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+    min-height: 100vh;
+}
+
+#admin-panel h1 {
+    color: #fff;
+    margin-bottom: 2rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.admin-card {
+    transition: transform 0.3s, box-shadow 0.3s;
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.admin-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+}
+
+.admin-card .card-body {
+    padding: 2rem;
+}
+
+.admin-card i {
+    margin-bottom: 1.5rem;
+}
+
+.admin-card .btn {
+    border-radius: 50px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+    margin-top: 1rem;
+}
+
+#admin-panel .card-header {
+    padding: 1rem;
+}
+
+#admin-panel .display-4 {
+    font-size: 3rem;
+    margin-bottom: 0;
+}
+
+.welcome-header {
+    margin-bottom: 2rem;
+}
+
+.welcome-header .display-4 {
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.welcome-header .lead {
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+}
+
+.dashboard-card {
+    border-radius: 10px;
+    overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(45deg, #4e73df 0%, #224abe 100%);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(45deg, #1cc88a 0%, #13855c 100%);
+}
+
+.bg-gradient-info {
+    background: linear-gradient(45deg, #36b9cc 0%, #258391 100%);
+}
+
+.bg-gradient-warning {
+    background: linear-gradient(45deg, #f6c23e 0%, #dda20a 100%);
+}
+
+#admin-panel .card-header {
+    font-weight: 600;
+    padding: 1rem;
+}
+
+#admin-panel .list-group-item {
+    transition: background-color 0.2s;
+    border-left: none;
+    border-right: none;
+}
+
+#admin-panel .list-group-item:hover {
+    background-color: rgba(0,123,255,0.05);
+}
+
+#admin-panel h2 {
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    #admin-panel .display-4 {
+        font-size: 2rem;
+    }
+
+    .dashboard-card h2 {
+        font-size: 1.75rem;
+    }
+}
+

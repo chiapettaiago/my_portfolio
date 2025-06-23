@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}Painel do Administrador | Chiapetta Dev{% endblock %}
+
+{% block content %}
+<section id="admin-panel" class="py-5 mt-5">
+    <div class="container">
+        <!-- Cabeçalho Personalizado -->
+        <div class="welcome-header mb-5 text-center">
+            <h1 class="display-4 fw-bold text-white">
+                <i class="fas fa-user-shield me-3"></i>Olá, {{ user.fullname or user.username }}!
+            </h1>
+            <p class="lead text-white">
+                {% if current_time.hour < 12 %}
+                    Bom dia! 🌞
+                {% elif current_time.hour < 18 %}
+                    Boa tarde! 🌤️
+                {% else %}
+                    Boa noite! 🌙
+                {% endif %}
+                Seja bem-vindo ao seu painel administrativo.
+            </p>
+            <p class="text-white-50">
+                {{ current_time.strftime('%A, %d de %B de %Y') }} | {{ current_time.strftime('%H:%M') }}
+            </p>
+        </div>
+
+        <!-- Resumo dos Dados -->
+        <div class="row mb-5">
+            <div class="col-md-3 mb-4">
+                <div class="card dashboard-card bg-gradient-primary border-0 shadow h-100">
+                    <div class="card-body text-white">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h5 class="mb-0">Posts</h5>
+                            <i class="fas fa-blog fa-2x opacity-50"></i>
+                        </div>
+                        <h2 class="mb-0">{{ total_posts }}</h2>
+                        <p class="mb-0">
+                            <span class="badge bg-light text-primary">{{ published_posts }} Publicados</span>
+                            <span class="badge bg-light text-primary">{{ draft_posts }} Rascunhos</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-4">
+                <div class="card dashboard-card bg-gradient-success border-0 shadow h-100">
+                    <div class="card-body text-white">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h5 class="mb-0">Comentários</h5>
+                            <i class="fas fa-comments fa-2x opacity-50"></i>
+                        </div>
+                        <h2 class="mb-0">{{ recent_comments|length }}</h2>
+                        <p class="small mb-0">Recentes</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-4">
+                <div class="card dashboard-card bg-gradient-info border-0 shadow h-100">
+                    <div class="card-body text-white">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h5 class="mb-0">Acessos</h5>
+                            <i class="fas fa-eye fa-2x opacity-50"></i>
+                        </div>
+                        <h2 class="mb-0">{{ recent_views|length }}</h2>
+                        <p class="small mb-0">Recentes</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-4">
+                <div class="card dashboard-card bg-gradient-warning border-0 shadow h-100">
+                    <div class="card-body text-white">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h5 class="mb-0">Agora</h5>
+                            <i class="fas fa-clock fa-2x opacity-50"></i>
+                        </div>
+                        <h2 class="mb-0">{{ current_time.strftime('%H:%M') }}</h2>
+                        <p class="small mb-0">{{ current_time.strftime('%d/%m/%Y') }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Acesso Rápido -->
+        <h2 class="text-white mb-4"><i class="fas fa-bolt me-2"></i>Acesso Rápido</h2>
+        <div class="row g-4 mb-5">
+            <!-- Card de Posts -->
+            <div class="col-md-6 col-lg-3">
+                <div class="card admin-card shadow h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-th-list fa-3x mb-3 text-primary"></i>
+                        <h5 class="card-title">Gerenciar Posts</h5>
+                        <p class="card-text">Visualize, edite e exclua posts do blog.</p>
+                        <a href="{{ url_for('all_posts') }}" class="btn btn-primary">
+                            <i class="fas fa-arrow-right me-2"></i>Acessar
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Card de Novo Post -->
+            <div class="col-md-6 col-lg-3">
+                <div class="card admin-card shadow h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-plus-circle fa-3x mb-3 text-success"></i>
+                        <h5 class="card-title">Criar Novo Post</h5>
+                        <p class="card-text">Adicione um novo conteúdo para o blog.</p>
+                        <a href="{{ url_for('create') }}" class="btn btn-success">
+                            <i class="fas fa-edit me-2"></i>Criar
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Card de Analytics -->
+            <div class="col-md-6 col-lg-3">
+                <div class="card admin-card shadow h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-chart-line fa-3x mb-3 text-info"></i>
+                        <h5 class="card-title">Analytics</h5>
+                        <p class="card-text">Visualize estatísticas e métricas do site.</p>
+                        <a href="{{ url_for('analytics') }}" class="btn btn-info text-white">
+                            <i class="fas fa-chart-bar me-2"></i>Analisar
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Card de PowerShell -->
+            <div class="col-md-6 col-lg-3">
+                <div class="card admin-card shadow h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-terminal fa-3x mb-3 text-secondary"></i>
+                        <h5 class="card-title">PowerShell</h5>
+                        <p class="card-text">Acesse os scripts e ferramentas PowerShell.</p>
+                        <a href="{{ url_for('powershell') }}" class="btn btn-secondary">
+                            <i class="fas fa-code me-2"></i>Scripts
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Conteúdo Recente -->
+        <div class="row">
+            <!-- Coluna da Esquerda - Último Post -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-star me-2"></i>Último Post Publicado</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if last_post %}
+                            <h5 class="mb-2">{{ last_post.title }}</h5>
+                            <p class="text-muted small mb-2">
+                                <i class="fas fa-calendar me-1"></i>{{ get_publication_date(last_post) }}
+                            </p>
+                            <div class="mb-3">{{ last_post.content|striptags|truncate(150) }}</div>
+                            <a href="{{ url_for('post_view', slug=last_post.slug) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye me-1"></i>Visualizar
+                            </a>
+                            <a href="{{ url_for('edit_post', post_id=last_post.id) }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-edit me-1"></i>Editar
+                            </a>
+                        {% else %}
+                            <p class="text-muted">Nenhum post publicado ainda.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Coluna da Direita - Atividade Recente -->
+            <div class="col-md-6">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Atividade Recente</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            {% for view in recent_views[:5] %}
+                                <li class="list-group-item px-0">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="fas fa-eye text-info me-2"></i>
+                                            <span class="fw-semibold">{{ view.path }}</span>
+                                            <br>
+                                            <small class="text-muted">{{ view.ip }} • {{ view.device_type }} • {{ view.browser }}</small>
+                                        </div>
+                                        <small class="text-muted">{{ view.timestamp.strftime('%d/%m %H:%M') }}</small>
+                                    </div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        <div class="text-center mt-3">
+                            <a href="{{ url_for('analytics') }}" class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-chart-line me-1"></i>Ver Análise Completa
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Comentários Recentes -->
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card shadow">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-comments me-2"></i>Comentários Recentes</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_comments %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Usuário</th>
+                                            <th>Comentário</th>
+                                            <th>Post</th>
+                                            <th>Data</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for comment in recent_comments %}
+                                            <tr>
+                                                <td>{{ comment.user.username }}</td>
+                                                <td>{{ comment.content|truncate(50) }}</td>
+                                                <td>
+                                                    <a href="{{ url_for('post_view', slug=comment.post.slug) }}">
+                                                        {{ comment.post.title|truncate(30) }}
+                                                    </a>
+                                                </td>
+                                                <td>{{ comment.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">Nenhum comentário ainda.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

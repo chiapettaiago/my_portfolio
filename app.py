@@ -84,7 +84,7 @@ login_manager.login_view = 'login'
 # Teste de conexão inicial
 try:
     with app.app_context():
-        db.engine.connect()
+        db.session.execute(db.text("SELECT 1"))
         logger.info("Conexão com o banco de dados estabelecida com sucesso!")
 except Exception as e:
     logger.error(f"Erro ao conectar ao banco de dados: {str(e)}")
@@ -539,8 +539,8 @@ def login():
         user = User.query.filter_by(username=request.form['username']).first()
         if user and check_password_hash(user.password, request.form['password']):
             login_user(user)
-            flash('Bem-vindo de volta!', 'success')
-            return redirect(url_for('all_posts' if user.role=='admin' else 'home'))
+            flash(f'Bem-vindo de volta, {user.fullname or user.username}!', 'success')
+            return redirect(url_for('admin' if user.role=='admin' else 'home'))
         flash('Usuário/senha inválidos', 'danger')
     return render_template('login.html')
 
@@ -761,6 +761,57 @@ def list_ps_scripts():
     } for s in scripts]
     
     return jsonify({'scripts': scripts_data})
+
+@app.route('/admin')
+@admin_required
+def admin():
+    # Estatísticas rápidas para o painel admin
+    total_posts = Post.query.count()
+    published_posts = Post.query.filter_by(is_published=True).count()
+    draft_posts = Post.query.filter_by(is_published=False).count()
+    
+    # Último post publicado
+    last_post = Post.query.filter_by(is_published=True).order_by(Post.created_at.desc()).first()
+    
+    # Atividade recente - últimas visualizações
+    recent_views = PageView.query.order_by(PageView.timestamp.desc()).limit(10).all()
+    
+    # Comentários recentes
+    recent_comments = Comment.query.order_by(Comment.created_at.desc()).limit(5).all()
+    
+    # Data e hora atual em São Paulo
+    fuso_sp = pytz.timezone('America/Sao_Paulo')
+    current_time = datetime.now(fuso_sp)
+    
+    return render_template(
+        'admin.html', 
+        user=current_user,
+        total_posts=total_posts,
+        published_posts=published_posts,
+        draft_posts=draft_posts,
+        last_post=last_post,
+        recent_views=recent_views,
+        recent_comments=recent_comments,
+        current_time=current_time
+    )
+
+@app.route('/admin_stats')
+@admin_required
+def admin_stats():
+    # Contagem de posts
+    total_posts = Post.query.count()
+    
+    # Contagem de visualizações
+    total_views = PageView.query.count()
+    
+    # Contagem de usuários registrados
+    total_users = User.query.count()
+    
+    return jsonify({
+        'posts': total_posts,
+        'views': total_views,
+        'users': total_users
+    })
 
 if __name__ == '__main__':
     with app.app_context():
