@@ -28,7 +28,7 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 app.config['SECRET_KEY'] = 'sua_chave_secreta'
 
 # Configuração do MySQL usando variáveis de ambiente
-mysql_host = os.getenv('MYSQL_HOST', '191.252.100.132')
+mysql_host = os.getenv('MYSQL_HOST', '144.22.178.234')
 mysql_port = os.getenv('MYSQL_PORT', '3306')
 mysql_user = 'portfolio'
 mysql_password = '8MEPBTxaaZRaKxs8'
@@ -58,7 +58,7 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 }
 
 # Configuração do Memcached usando variáveis de ambiente
-memcached_host = os.getenv('MEMCACHED_HOST', '191.252.100.132')
+memcached_host = os.getenv('MEMCACHED_HOST', '1144.22.178.234')
 memcached_port = os.getenv('MEMCACHED_PORT', '11211')
 mc = memcache.Client([f'{memcached_host}:{memcached_port}'], debug=1)  # Ativando debug do memcached
 CACHE_TIMEOUT = 300  # 5 minutos em segundos
