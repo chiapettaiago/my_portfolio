@@ -1059,6 +1059,28 @@ def internal_server_error(e):
         </html>
         """), 500
 
+@app.route('/admin')
+@admin_required
+def admin_panel():
+    from datetime import datetime
+    # Dados para o painel (exemplo básico, ajuste conforme necessário)
+    user = current_user
+    current_time = datetime.now()
+    # Estatísticas
+    posts_ref = get_firestore_collection('posts')
+    posts = [Post.from_dict(doc) for doc in posts_ref.stream()]
+    total_posts = len(posts)
+    published_posts = len([p for p in posts if p.is_published])
+    draft_posts = len([p for p in posts if not p.is_published and not p.scheduled_for])
+    last_post = posts[0] if posts else None
+    # Comentários recentes
+    comments_ref = get_firestore_collection('comments')
+    recent_comments = [Comment.from_dict(doc) for doc in comments_ref.stream()]
+    # Visualizações recentes
+    views_ref = get_firestore_collection('pageviews')
+    recent_views = [PageView.from_dict(doc) for doc in views_ref.stream()]
+    return render_template('admin.html', user=user, current_time=current_time, total_posts=total_posts, published_posts=published_posts, draft_posts=draft_posts, last_post=last_post, recent_comments=recent_comments, recent_views=recent_views)
+
 if __name__ == '__main__':
     # Não é necessário criar tabelas no Firestore
     app.run(
