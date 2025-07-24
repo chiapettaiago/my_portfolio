@@ -179,6 +179,8 @@ def get_user_by_id(user_id):
         return User.from_dict(doc)
     return None
 
+# Atualiza para usar filter= nas queries Firestore
+
 def get_user_by_username(username):
     if db_firestore is None:
         # Dados de exemplo para modo de desenvolvimento
@@ -193,14 +195,13 @@ def get_user_by_username(username):
                 role="admin"
             )
         return None
-    
-    users = get_firestore_collection('users').where('username', '==', username).stream()
+    users = get_firestore_collection('users').where(filter=('username', '==', username)).stream()
     for doc in users:
         return User.from_dict(doc)
     return None
 
 def get_user_by_email(email):
-    users = get_firestore_collection('users').where('email', '==', email).stream()
+    users = get_firestore_collection('users').where(filter=('email', '==', email)).stream()
     for doc in users:
         return User.from_dict(doc)
     return None
@@ -475,7 +476,7 @@ def posts_all():
 
 @app.route('/post/<slug>')
 def post_view(slug):
-    post_ref = get_firestore_collection('posts').where('slug', '==', slug).stream()
+    post_ref = get_firestore_collection('posts').where(filter=('slug', '==', slug)).stream()
     post = next((Post.from_dict(doc) for doc in post_ref), None)
     if not post:
         abort(404)
@@ -530,7 +531,7 @@ def create():
 @app.route('/post/<slug>/edit', methods=['GET','POST'])
 @admin_required
 def edit_post(slug):
-    post_ref = get_firestore_collection('posts').where('slug', '==', slug).stream()
+    post_ref = get_firestore_collection('posts').where(filter=('slug', '==', slug)).stream()
     post = next((Post.from_dict(doc) for doc in post_ref), None)
     if not post:
         abort(404)
@@ -564,7 +565,7 @@ def edit_post(slug):
 @app.route('/post/<slug>/delete', methods=['POST'])
 @admin_required
 def delete_post(slug):
-    post_ref = get_firestore_collection('posts').where('slug', '==', slug).stream()
+    post_ref = get_firestore_collection('posts').where(filter=('slug', '==', slug)).stream()
     post = next((Post.from_dict(doc) for doc in post_ref), None)
     if not post:
         abort(404)
@@ -575,7 +576,7 @@ def delete_post(slug):
 @app.route('/post/<slug>/comment', methods=['POST'])
 @login_required
 def add_comment(slug):
-    post_ref = get_firestore_collection('posts').where('slug', '==', slug).stream()
+    post_ref = get_firestore_collection('posts').where(filter=('slug', '==', slug)).stream()
     post = next((Post.from_dict(doc) for doc in post_ref), None)
     if not post:
         abort(404)
@@ -934,7 +935,7 @@ def save_comment_firestore(comment: Comment):
 
 def get_comments_by_post_firestore(post_id):
     comments_ref = get_firestore_collection('comments')
-    query = comments_ref.where('post_id', '==', post_id)
+    query = comments_ref.where(filter=('post_id', '==', post_id))
     return [Comment.from_dict(doc) for doc in query.stream()]
 
 # Exemplo de função para salvar visualização de página
@@ -1063,20 +1064,16 @@ def internal_server_error(e):
 @admin_required
 def admin_panel():
     from datetime import datetime
-    # Dados para o painel (exemplo básico, ajuste conforme necessário)
     user = current_user
     current_time = datetime.now()
-    # Estatísticas
     posts_ref = get_firestore_collection('posts')
     posts = [Post.from_dict(doc) for doc in posts_ref.stream()]
     total_posts = len(posts)
     published_posts = len([p for p in posts if p.is_published])
     draft_posts = len([p for p in posts if not p.is_published and not p.scheduled_for])
     last_post = posts[0] if posts else None
-    # Comentários recentes
     comments_ref = get_firestore_collection('comments')
     recent_comments = [Comment.from_dict(doc) for doc in comments_ref.stream()]
-    # Visualizações recentes
     views_ref = get_firestore_collection('pageviews')
     recent_views = [PageView.from_dict(doc) for doc in views_ref.stream()]
     return render_template('admin.html', user=user, current_time=current_time, total_posts=total_posts, published_posts=published_posts, draft_posts=draft_posts, last_post=last_post, recent_comments=recent_comments, recent_views=recent_views)
