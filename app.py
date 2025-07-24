@@ -1,15 +1,17 @@
 from functools import wraps
 from flask import Flask, render_template, render_template_string, request, redirect, url_for, flash, abort, Response, jsonify
-from flask_sqlalchemy import SQLAlchemy
+import firebase_admin
+from firebase_admin import credentials, firestore
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user, AnonymousUserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import pytz
 from datetime import datetime, date, timedelta
 import os
-import pymysql
-import memcache
 import logging
+import hashlib
+import binascii
+import scrypt
 import json
 import uuid
 import subprocess
@@ -27,48 +29,82 @@ app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 app.config['SECRET_KEY'] = 'sua_chave_secreta'
 
-# Configuração do MySQL usando variáveis de ambiente
-mysql_host = os.getenv('MYSQL_HOST', '191.252.100.132')
-mysql_port = os.getenv('MYSQL_PORT', '3306')
-mysql_user = 'portfolio'
-mysql_password = '8MEPBTxaaZRaKxs8'
-mysql_db = 'portfolio'
-
-# Log das configurações de conexão
-logger.debug(f"Tentando conectar ao MySQL em: {mysql_host}:{mysql_port}")
-logger.debug(f"Usuário: {mysql_user}")
-logger.debug(f"Database: {mysql_db}")
-
-app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{mysql_user}:{mysql_password}@{mysql_host}:{mysql_port}/{mysql_db}'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Otimizações de memória para SQLAlchemy com configurações específicas do MySQL
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_size': 5,
-    'pool_recycle': 3600,
-    'pool_pre_ping': True,
-    'max_overflow': 10,
-    'echo': True,  # Ativando logs SQL para debug
-    'connect_args': {
-        'connect_timeout': 30,  # Aumentando o timeout para 30 segundos
-        'charset': 'utf8mb4',
-        'use_unicode': True,
-        'client_flag': pymysql.constants.CLIENT.MULTI_STATEMENTS
-    }
-}
-
-# Configuração do Memcached usando variáveis de ambiente
-memcached_host = os.getenv('MEMCACHED_HOST', '191.252.100.132')
-memcached_port = os.getenv('MEMCACHED_PORT', '11211')
-mc = memcache.Client([f'{memcached_host}:{memcached_port}'], debug=1)  # Ativando debug do memcached
-CACHE_TIMEOUT = 300  # 5 minutos em segundos
-
 # Pasta de upload e limites
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB
+CACHE_TIMEOUT = 60 * 15  # 15 minutos
+
+# Configuração do Firebase
+# Caminho para o arquivo de credenciais do Firebase
+firebase_credentials_path = os.path.join(BASE_DIR, 'firebase_credentials.json')
+
+# Função personalizada para verificar senhas scrypt (migradas do MySQL)
+def check_scrypt_password(stored_hash, password):
+    """
+    Verifica senha contra hash scrypt no formato: scrypt:n:r:p$salt$hash
+    Compatível com senhas migradas do MySQL
+    """
+    if not stored_hash.startswith('scrypt:'):
+        # Se não for scrypt, usar verificação padrão do Werkzeug
+        return check_password_hash(stored_hash, password)
+    
+    try:
+        # Parse do formato scrypt:n:r:p$salt$hash
+        parts = stored_hash.split('$')
+        if len(parts) != 3:
+            return False
+            
+        params_and_salt = parts[1]
+        stored_hash_hex = parts[2]
+        
+        # Extrair parâmetros scrypt do formato scrypt:32768:8:1
+        params_part = stored_hash.split('$')[0]  # scrypt:32768:8:1
+        param_values = params_part.split(':')
+        
+        if len(param_values) != 4 or param_values[0] != 'scrypt':
+            return False
+            
+        n = int(param_values[1])  # 32768
+        r = int(param_values[2])  # 8  
+        p = int(param_values[3])  # 1
+        
+        # Salt está na segunda parte após os parâmetros
+        salt = params_and_salt.split(':')[-1]  # Pega tudo após o último ':'
+        
+        # Gerar hash scrypt da senha fornecida usando a biblioteca scrypt
+        password_bytes = password.encode('utf-8')
+        salt_bytes = salt.encode('utf-8')
+        
+        # Usar a biblioteca scrypt (mais compatível com altos valores de N)
+        generated_hash = scrypt.hash(
+            password_bytes,
+            salt_bytes,
+            N=n, r=r, p=p,
+            buflen=64
+        )
+        
+        generated_hash_hex = generated_hash.hex()
+        
+        # Comparar os hashes
+        return generated_hash_hex == stored_hash_hex
+        
+    except Exception as e:
+        logger.error(f"Erro ao verificar senha scrypt: {str(e)}")
+        return False
+
+# Inicialização do Firebase usando o arquivo de credenciais
+try:
+    cred = credentials.Certificate(firebase_credentials_path)
+    firebase_admin.initialize_app(cred)
+    db_firestore = firestore.client()
+    logger.info("Firebase inicializado com sucesso!")
+except Exception as e:
+    logger.error(f"Erro ao inicializar Firebase: {str(e)}")
+    logger.warning("Executando em modo de desenvolvimento sem Firebase")
+    db_firestore = None
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
@@ -77,77 +113,208 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Extensões
-db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
 # Teste de conexão inicial
 try:
     with app.app_context():
-        db.engine.connect()
         logger.info("Conexão com o banco de dados estabelecida com sucesso!")
 except Exception as e:
     logger.error(f"Erro ao conectar ao banco de dados: {str(e)}")
     raise
 
-# Modelos
-class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password = db.Column(db.String(255), nullable=False)
-    fullname = db.Column(db.String(100), nullable=True)
-    email = db.Column(db.String(120), unique=True, nullable=True)
-    phone = db.Column(db.String(20), nullable=True)
-    role = db.Column(db.String(20), default='user')
+# Remover SQLAlchemy, PyMySQL, Memcached
+# Adicionar helpers para Firestore
 
-class Comment(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    user = db.relationship('User', backref='comments', lazy=True)
+def get_firestore_collection(name):
+    if db_firestore is None:
+        logger.warning(f"Tentativa de acesso à coleção '{name}' sem Firebase configurado")
+        return None
+    return db_firestore.collection(name)
 
-class Post(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100), nullable=False)
-    slug = db.Column(db.String(100), nullable=False, unique=True)
-    content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(pytz.timezone('America/Sao_Paulo')))
-    scheduled_for = db.Column(db.DateTime, nullable=True)
-    is_published = db.Column(db.Boolean, default=False)
-    main_image = db.Column(db.String(255))  # agora armazena o nome do arquivo
-    comments = db.relationship('Comment', backref='post', lazy=True)
-    user = db.relationship('User', backref='posts')
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+# Usuário
+class User(UserMixin):
+    def __init__(self, id, username, password, fullname, email, phone, role):
+        self.id = id
+        self.username = username
+        self.password = password
+        self.fullname = fullname
+        self.email = email
+        self.phone = phone
+        self.role = role
 
-# Modelo para contagem de acessos
-class PageView(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    path = db.Column(db.String(255), nullable=False)
-    ip = db.Column(db.String(45), nullable=False)
-    user_agent = db.Column(db.String(255), nullable=True)
-    browser = db.Column(db.String(50), nullable=True)
-    device_type = db.Column(db.String(20), nullable=True)
-    referrer = db.Column(db.String(255), nullable=True)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    @staticmethod
+    def from_dict(doc):
+        data = doc.to_dict()
+        return User(
+            id=doc.id,
+            username=data.get('username'),
+            password=data.get('password'),
+            fullname=data.get('fullname'),
+            email=data.get('email'),
+            phone=data.get('phone'),
+            role=data.get('role', 'user')
+        )
+
+# Funções CRUD para User
+
+def get_user_by_id(user_id):
+    if db_firestore is None:
+        # Dados de exemplo para modo de desenvolvimento
+        if user_id == "admin":
+            return User(
+                id="admin",
+                username="admin",
+                password=generate_password_hash("admin"),
+                fullname="Administrador",
+                email="admin@example.com",
+                phone="",
+                role="admin"
+            )
+        return None
     
-# Modelo para scripts PowerShell temporários
-class PowerShellScript(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    token = db.Column(db.String(64), unique=True, nullable=False)
-    script = db.Column(db.Text, nullable=False)
-    description = db.Column(db.String(255), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    expires_at = db.Column(db.DateTime, nullable=False)
-    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    access_count = db.Column(db.Integer, default=0)
-    last_accessed = db.Column(db.DateTime, nullable=True)
+    doc = get_firestore_collection('users').document(user_id).get()
+    if doc.exists:
+        return User.from_dict(doc)
+    return None
+
+def get_user_by_username(username):
+    if db_firestore is None:
+        # Dados de exemplo para modo de desenvolvimento
+        if username == "admin":
+            return User(
+                id="admin",
+                username="admin",
+                password=generate_password_hash("admin"),
+                fullname="Administrador",
+                email="admin@example.com",
+                phone="",
+                role="admin"
+            )
+        return None
+    
+    users = get_firestore_collection('users').where('username', '==', username).stream()
+    for doc in users:
+        return User.from_dict(doc)
+    return None
+
+def get_user_by_email(email):
+    users = get_firestore_collection('users').where('email', '==', email).stream()
+    for doc in users:
+        return User.from_dict(doc)
+    return None
+
+# MODELOS FIRESTORE
+# User já foi adaptado acima
+
+# Post
+class Post:
+    def __init__(self, id, title, slug, content, created_at, scheduled_for, is_published, main_image, user_id):
+        self.id = id
+        self.title = title
+        self.slug = slug
+        self.content = content
+        self.created_at = created_at
+        self.scheduled_for = scheduled_for
+        self.is_published = is_published
+        self.main_image = main_image
+        self.user_id = user_id
+
+    @staticmethod
+    def from_dict(doc):
+        data = doc.to_dict()
+        return Post(
+            id=doc.id,
+            title=data.get('title'),
+            slug=data.get('slug'),
+            content=data.get('content'),
+            created_at=data.get('created_at'),
+            scheduled_for=data.get('scheduled_for'),
+            is_published=data.get('is_published', False),
+            main_image=data.get('main_image'),
+            user_id=data.get('user_id')
+        )
+
+# Comment
+class Comment:
+    def __init__(self, id, post_id, user_id, content, created_at):
+        self.id = id
+        self.post_id = post_id
+        self.user_id = user_id
+        self.content = content
+        self.created_at = created_at
+
+    @staticmethod
+    def from_dict(doc):
+        data = doc.to_dict()
+        return Comment(
+            id=doc.id,
+            post_id=data.get('post_id'),
+            user_id=data.get('user_id'),
+            content=data.get('content'),
+            created_at=data.get('created_at')
+        )
+
+# PageView
+class PageView:
+    def __init__(self, id, path, ip, user_agent, browser, device_type, referrer, timestamp, user_id):
+        self.id = id
+        self.path = path
+        self.ip = ip
+        self.user_agent = user_agent
+        self.browser = browser
+        self.device_type = device_type
+        self.referrer = referrer
+        self.timestamp = timestamp
+        self.user_id = user_id
+
+    @staticmethod
+    def from_dict(doc):
+        data = doc.to_dict()
+        return PageView(
+            id=doc.id,
+            path=data.get('path'),
+            ip=data.get('ip'),
+            user_agent=data.get('user_agent'),
+            browser=data.get('browser'),
+            device_type=data.get('device_type'),
+            referrer=data.get('referrer'),
+            timestamp=data.get('timestamp'),
+            user_id=data.get('user_id')
+        )
+
+# PowerShellScript
+class PowerShellScript:
+    def __init__(self, id, token, script, description, created_at, expires_at, created_by, access_count, last_accessed):
+        self.id = id
+        self.token = token
+        self.script = script
+        self.description = description
+        self.created_at = created_at
+        self.expires_at = expires_at
+        self.created_by = created_by
+        self.access_count = access_count
+        self.last_accessed = last_accessed
+
+    @staticmethod
+    def from_dict(doc):
+        data = doc.to_dict()
+        return PowerShellScript(
+            id=doc.id,
+            token=data.get('token'),
+            script=data.get('script'),
+            description=data.get('description'),
+            created_at=data.get('created_at'),
+            expires_at=data.get('expires_at'),
+            created_by=data.get('created_by'),
+            access_count=data.get('access_count', 0),
+            last_accessed=data.get('last_accessed')
+        )
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return get_user_by_id(user_id)
 
 class AnonymousUser(AnonymousUserMixin):
     role = 'user'
@@ -186,13 +353,13 @@ def get_unique_slug(title, post_id=None):
     n = 1
     
     while True:
-        # Verifica se o slug existe (excluindo o post atual se estiver editando)
-        if post_id:
-            existing = Post.query.filter(Post.slug == slug, Post.id != post_id).first()
-        else:
-            existing = Post.query.filter_by(slug=slug).first()
+        # Verifica se o slug existe no Firestore (excluindo o post atual se estiver editando)
+        posts_ref = get_firestore_collection('posts')
+        query = posts_ref.where('slug', '==', slug)
+        docs = list(query.stream())
         
-        if not existing:
+        # Se não encontrou nenhum ou se o único encontrado é o próprio post
+        if not docs or (post_id and len(docs) == 1 and docs[0].id == post_id):
             return slug
             
         # Se já existe, adiciona um número ao final
@@ -211,24 +378,9 @@ def get_publication_date(post):
     return post.created_at.astimezone(fuso_sp).strftime('%d/%m/%Y %H:%M')
 
 def get_recent_posts():
-    # Tenta buscar do cache primeiro
-    cache_key = 'recent_posts'
-    cached_posts = mc.get(cache_key)
-    
-    if cached_posts is not None:
-        return cached_posts
-        
-    # Se não estiver no cache, busca do banco
-    fuso_sp = pytz.timezone('America/Sao_Paulo')
-    now = datetime.now(fuso_sp)
-    
-    # Carrega os posts com todos os campos necessários
-    posts = Post.query.filter(
-        db.or_(
-            Post.is_published == True,
-            db.and_(Post.scheduled_for.isnot(None), Post.scheduled_for <= now)
-        )
-    ).order_by(Post.created_at.desc()).limit(3).all()
+    # Usando Firestore para buscar os posts mais recentes
+    # Busca diretamente do Firestore, sem cache
+    posts = get_published_posts_firestore()[:3]  # Limita a 3 posts
     
     posts_data = [{
         'id': p.id,
@@ -239,18 +391,20 @@ def get_recent_posts():
         'created_at': get_publication_date(p)  # Agora usa a data de publicação
     } for p in posts]
     
-    # Salva no cache
-    mc.set(cache_key, posts_data, CACHE_TIMEOUT)
     return posts_data
 
 def publish_scheduled_posts():
     with app.app_context():
         fuso_sp = pytz.timezone('America/Sao_Paulo')
         now = datetime.now(fuso_sp)
-        pendentes = Post.query.filter(Post.is_published==False, Post.scheduled_for<=now).all()
-        for p in pendentes:
-            p.is_published = True
-        db.session.commit()
+        
+        # Buscar posts agendados que devem ser publicados
+        posts_ref = get_firestore_collection('posts')
+        query = posts_ref.where('is_published', '==', False).where('scheduled_for', '<=', now)
+        
+        for doc in query.stream():
+            doc_ref = posts_ref.document(doc.id)
+            doc_ref.update({'is_published': True})
 
 # Registra a função get_publication_date como função template
 app.jinja_env.globals.update(get_publication_date=get_publication_date)
@@ -258,106 +412,77 @@ app.jinja_env.globals.update(get_publication_date=get_publication_date)
 # Middleware para registrar acessos às páginas
 @app.before_request
 def track_page_view():
-    # Verificar se é uma das páginas que devemos contabilizar:
-    # 1. Página principal (/)
-    # 2. Página de post individual (/post/slug)
-    # 3. Página de listagem de todos os posts (/posts_all)
     valid_paths = ['/', '/posts_all']
     is_post_page = request.path.startswith('/post/') and not request.path.endswith('/edit') and not request.path.endswith('/delete')
-    
-    # Contabilizar apenas se for uma das páginas desejadas
     if not (request.path in valid_paths or is_post_page):
         return
-    
-    # Ignorar recursos estáticos, favicon ou a própria página de analytics
     if (request.path.startswith('/static') or 
         request.path == '/favicon.ico' or 
         request.path == '/analytics'):
         return
-    
-    # Captura informações do acesso
     user_agent_string = request.headers.get('User-Agent', '')
     user_agent = parse(user_agent_string)
-    
     page_view = PageView(
+        id=None,
         path=request.path,
         ip=request.remote_addr,
-        user_agent=user_agent_string[:255],  # Limita o tamanho para evitar erros
+        user_agent=user_agent_string[:255],
         browser=user_agent.browser.family,
         device_type = ('Mobile' if user_agent.is_mobile else 
                        'Tablet' if user_agent.is_tablet else 
                        'PC'),
         referrer=request.referrer[:255] if request.referrer else None,
+        timestamp=datetime.now(),
         user_id=current_user.id if current_user.is_authenticated else None
     )
-    
-    # Salva a visualização no banco de dados
-    db.session.add(page_view)
-    db.session.commit()
+    save_pageview_firestore(page_view)
 
 # Rotas
 @app.route('/')
 def home():
     skills = ["Python","Flask","HTML","CSS","JavaScript","SQL","Git","Linux","Desenvolvimento Web"]
-    recent_posts = get_recent_posts()
+    recent_posts = get_published_posts_firestore()[:3]
     return render_template('index.html', skills=skills, recent_posts=recent_posts, current_user=current_user)
 
 @app.route('/posts')
 @admin_required
 def all_posts():
-    posts = Post.query.order_by(Post.created_at.desc()).all()
-    return render_template('all_posts.html', posts=posts)
+    try:
+        # Buscar todos os posts no Firestore, ordenados por data de criação
+        posts_ref = get_firestore_collection('posts')
+        posts_data = []
+        
+        for doc in posts_ref.stream():
+            try:
+                post = Post.from_dict(doc)
+                posts_data.append(post)
+            except Exception as e:
+                logger.error(f"Erro ao processar post {doc.id}: {str(e)}")
+                continue
+                
+        posts = sorted(posts_data, key=lambda p: p.created_at, reverse=True)
+        return render_template('all_posts.html', posts=posts)
+        
+    except Exception as e:
+        logger.error(f"Erro na função all_posts: {str(e)}")
+        flash('Erro ao carregar posts. Verifique os logs.', 'danger')
+        return redirect(url_for('home'))
 
 @app.route('/posts_all')
 def posts_all():
-    # Lista posts publicados e agendados
-    fuso_sp = pytz.timezone('America/Sao_Paulo')
-    now = datetime.now(fuso_sp)
-    posts = Post.query.filter(
-        db.or_(
-            Post.is_published == True,
-            db.and_(Post.scheduled_for.isnot(None), Post.scheduled_for <= now)
-        )
-    ).order_by(Post.created_at.desc()).all()
+    posts = get_published_posts_firestore()
     return render_template('posts_list.html', posts=posts, current_user=current_user)
 
 @app.route('/post/<slug>')
 def post_view(slug):
-    # Busca o post pelo slug
-    post = Post.query.filter_by(slug=slug).first_or_404()
+    post_ref = get_firestore_collection('posts').where('slug', '==', slug).stream()
+    post = next((Post.from_dict(doc) for doc in post_ref), None)
+    if not post:
+        abort(404)
     post_id = post.id
-    
-    # Tenta buscar do cache primeiro
-    cache_key = f'post_{post_id}'
-    cached_post = mc.get(cache_key)
-    cached_comments = mc.get(f'comments_{post_id}')
-    
-    if cached_post is None:
-        post_dict = {
-            'id': post.id,
-            'title': post.title,
-            'slug': post.slug,
-            'content': post.content,
-            'main_image': post.main_image,
-            'created_at': get_publication_date(post),  # Agora usa a data de publicação
-            'scheduled_for': post.scheduled_for.strftime('%d/%m/%Y %H:%M') if post.scheduled_for else '',
-            'user': post.user.username if post.user else 'Desconhecido'
-        }
-        # Salva no cache
-        mc.set(cache_key, post_dict, CACHE_TIMEOUT)
-    else:
-        post_dict = cached_post
-    
-    if cached_comments is None:
-        # Carrega os comentários completos
-        comments = Comment.query.filter_by(post_id=post_id).order_by(Comment.created_at.desc()).all()
-        # Salva no cache
-        mc.set(f'comments_{post_id}', comments, CACHE_TIMEOUT)
-    else:
-        comments = cached_comments
-    
-    recent_posts = get_recent_posts()
-    return render_template('post.html', post=post_dict, recent_posts=recent_posts, comments=comments, current_user=current_user)
+    comments = get_comments_by_post_firestore(post_id)
+    recent_posts = get_published_posts_firestore()[:3]
+    return render_template('post.html', post=post, recent_posts=recent_posts, comments=comments, current_user=current_user)
 
 @app.route('/create', methods=['GET','POST'])
 @admin_required
@@ -368,8 +493,7 @@ def create():
         scheduled_date = request.form.get('scheduled_date')
         scheduled_time = request.form.get('scheduled_time')
 
-        # Gerar um slug único para o post
-        slug = get_unique_slug(title)
+        slug = slugify(title)
 
         file = request.files.get('main_image')
         filename = None
@@ -378,108 +502,90 @@ def create():
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
         new_post = Post(
-            title=title, 
-            content=content, 
+            id=None,
+            title=title,
             slug=slug,
-            main_image=filename, 
-            is_published=False, 
+            content=content,
+            created_at=datetime.now(),
+            scheduled_for=None,
+            is_published=False,
+            main_image=filename,
             user_id=current_user.id
         )
 
         if scheduled_date and scheduled_time:
             try:
                 dt = datetime.strptime(f"{scheduled_date} {scheduled_time}", "%Y-%m-%d %H:%M")
-                new_post.scheduled_for = pytz.timezone('America/Sao_Paulo').localize(dt)
+                new_post.scheduled_for = dt
             except ValueError:
                 flash('Data ou hora inválida!', 'danger')
                 return redirect(url_for('create'))
 
-        db.session.add(new_post)
-        db.session.commit()
-        
-        # Invalida o cache de posts recentes
-        mc.delete('recent_posts')
-        
+        save_post_firestore(new_post)
         flash('Post criado com sucesso! 🚀', 'success')
-        return redirect(url_for('all_posts'))
+        return redirect(url_for('posts_all'))
 
     return render_template('create.html')
 
-@app.route('/post/<int:post_id>/edit', methods=['GET','POST'])
+@app.route('/post/<slug>/edit', methods=['GET','POST'])
 @admin_required
-def edit_post(post_id):
-    post = Post.query.get_or_404(post_id)
+def edit_post(slug):
+    post_ref = get_firestore_collection('posts').where('slug', '==', slug).stream()
+    post = next((Post.from_dict(doc) for doc in post_ref), None)
+    if not post:
+        abort(404)
     if request.method == 'POST':
-        title = request.form['title']
-        post.title = title
+        post.title = request.form['title']
         post.content = request.form['content']
-
-        # Atualizar o slug apenas se o título mudou
-        if slugify(post.title) != slugify(title):
-            post.slug = get_unique_slug(title, post_id)
-
+        post.slug = slugify(post.title)
         file = request.files.get('main_image')
         if file and allowed_file(file.filename):
             fname = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], fname))
             post.main_image = fname
-
         sd = request.form.get('scheduled_date')
         st = request.form.get('scheduled_time')
         if sd and st:
             try:
                 dt = datetime.strptime(f"{sd} {st}", "%Y-%m-%d %H:%M")
-                post.scheduled_for = pytz.timezone('America/Sao_Paulo').localize(dt)
+                post.scheduled_for = dt
                 post.is_published = False
             except ValueError:
                 flash('Data ou hora inválida!', 'danger')
-                return redirect(url_for('edit_post', post_id=post.id))
+                return redirect(url_for('edit_post', slug=post.slug))
         else:
             post.scheduled_for = None
             post.is_published = True
-
-        db.session.commit()
-        
-        # Invalida os caches relacionados
-        mc.delete(f'post_{post_id}')
-        mc.delete('recent_posts')
-        
+        save_post_firestore(post)
         flash('Post atualizado com sucesso! 🎉', 'success')
-        return redirect(url_for('all_posts'))
-
+        return redirect(url_for('posts_all'))
     return render_template('edit_post.html', post=post)
 
-@app.route('/post/<int:post_id>/delete', methods=['POST'])
+@app.route('/post/<slug>/delete', methods=['POST'])
 @admin_required
-def delete_post(post_id):
-    post = Post.query.get_or_404(post_id)
-    db.session.delete(post)
-    db.session.commit()
-    
-    # Invalida os caches relacionados
-    mc.delete(f'post_{post_id}')
-    mc.delete(f'comments_{post_id}')
-    mc.delete('recent_posts')
-    
-    return redirect(url_for('all_posts'))
+def delete_post(slug):
+    post_ref = get_firestore_collection('posts').where('slug', '==', slug).stream()
+    post = next((Post.from_dict(doc) for doc in post_ref), None)
+    if not post:
+        abort(404)
+    get_firestore_collection('posts').document(post.id).delete()
+    flash('Post excluído com sucesso!', 'success')
+    return redirect(url_for('posts_all'))
 
 @app.route('/post/<slug>/comment', methods=['POST'])
 @login_required
 def add_comment(slug):
-    post = Post.query.filter_by(slug=slug).first_or_404()
+    post_ref = get_firestore_collection('posts').where('slug', '==', slug).stream()
+    post = next((Post.from_dict(doc) for doc in post_ref), None)
+    if not post:
+        abort(404)
     post_id = post.id
-    
     content = request.form.get('content')
     if not content:
         flash('Comentário vazio não vale! 😅', 'danger')
         return redirect(url_for('post_view', slug=slug))
-    comment = Comment(post_id=post_id, user_id=current_user.id, content=content)
-    db.session.add(comment)
-    db.session.commit()
-    
-    # Invalida o cache de comentários
-    mc.delete(f'comments_{post_id}')
-    
+    comment = Comment(id=None, post_id=post_id, user_id=current_user.id, content=content, created_at=datetime.now())
+    save_comment_firestore(comment)
     flash('Comentário adicionado!', 'success')
     return redirect(url_for('post_view', slug=slug))
 
@@ -492,52 +598,50 @@ def register():
         phone = request.form.get('phone')
         password = request.form['password']
         confirm_password = request.form.get('confirm_password')
-        
         # Validações
         if not fullname or not email:
             flash('Por favor, preencha todos os campos obrigatórios.', 'danger')
             return render_template('register.html')
-            
         if password != confirm_password:
             flash('As senhas não conferem.', 'danger')
             return render_template('register.html')
-        
         # Verifica se o usuário ou e-mail já existem
-        existing_user = User.query.filter((User.username == username) | (User.email == email)).first()
-        if existing_user:
-            if existing_user.username == username:
-                flash('Esse nome de usuário já está sendo utilizado.', 'danger')
-            else:
-                flash('Esse e-mail já está registrado.', 'danger')
+        if get_user_by_username(username):
+            flash('Esse nome de usuário já está sendo utilizado.', 'danger')
             return render_template('register.html')
-        
+        if get_user_by_email(email):
+            flash('Esse e-mail já está registrado.', 'danger')
+            return render_template('register.html')
         # Cria o novo usuário
         hashed_password = generate_password_hash(password)
         new_user = User(
-            username=username, 
-            password=hashed_password, 
-            fullname=fullname, 
-            email=email, 
+            id=None,
+            username=username,
+            password=hashed_password,
+            fullname=fullname,
+            email=email,
             phone=phone,
             role='user'
         )
-        
-        try:
-            db.session.add(new_user)
-            db.session.commit()
-            flash('Registro realizado com sucesso! Faça login para continuar. 😉', 'success')
-            return redirect(url_for('login'))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Ocorreu um erro ao registrar seu usuário. Tente novamente.', 'danger')
-            
+        # Salva no Firestore
+        doc_ref = get_firestore_collection('users').document()
+        doc_ref.set({
+            'username': new_user.username,
+            'password': new_user.password,
+            'fullname': new_user.fullname,
+            'email': new_user.email,
+            'phone': new_user.phone,
+            'role': new_user.role
+        })
+        flash('Registro realizado com sucesso! Faça login para continuar. 😉', 'success')
+        return redirect(url_for('login'))
     return render_template('register.html')
 
 @app.route('/login', methods=['GET','POST'])
 def login():
     if request.method == 'POST':
-        user = User.query.filter_by(username=request.form['username']).first()
-        if user and check_password_hash(user.password, request.form['password']):
+        user = get_user_by_username(request.form['username'])
+        if user and check_scrypt_password(user.password, request.form['password']):
             login_user(user)
             flash('Bem-vindo de volta!', 'success')
             return redirect(url_for('all_posts' if user.role=='admin' else 'home'))
@@ -552,8 +656,8 @@ def logout():
 
 @app.route('/feed')
 def rss_feed():
-    # Carrega os posts completos para o feed
-    posts = Post.query.order_by(Post.created_at.desc()).limit(10).all()
+    # Carrega os posts completos para o feed usando Firestore
+    posts = get_published_posts_firestore()[:10]
     
     rss = render_template_string(
         """<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>
@@ -605,10 +709,11 @@ def analytics():
         start_date = end_date - timedelta(days=30)
         flash('Formato de data inválido. Usando os últimos 30 dias como padrão.', 'warning')
     
-    # Busca visualizações no período
-    views = PageView.query.filter(
-        PageView.timestamp.between(start_date, end_date)
-    ).all()
+    # Busca visualizações no período usando Firestore
+    pageviews_ref = get_firestore_collection('pageviews')
+    query = pageviews_ref.where('timestamp', '>=', start_date).where('timestamp', '<=', end_date)
+    
+    views = [PageView.from_dict(doc) for doc in query.stream()]
     
     # Estatísticas gerais
     total_views = len(views)
@@ -689,65 +794,70 @@ def access_ps_script(token):
 # Execute como Administrador
 
 # Ativar tema escuro do sistema
-Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Value 0
+Set-ItemProperty -Path \"HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize\" -Name \"SystemUsesLightTheme\" -Value 0
 
 # Ativar tema escuro dos apps
-Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Value 0
+Set-ItemProperty -Path \"HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize\" -Name \"AppsUseLightTheme\" -Value 0
 
 # Forçar atualização das configurações
 rundll32.exe user32.dll,UpdatePerUserSystemParameters
 
-Write-Host "Modo escuro ativado com sucesso!" -ForegroundColor Green
-Write-Host "Pode ser necessário reiniciar algumas aplicações para aplicar as mudanças." -ForegroundColor Yellow
+Write-Host \"Modo escuro ativado com sucesso!\" -ForegroundColor Green
+Write-Host \"Pode ser necessário reiniciar algumas aplicações para aplicar as mudanças.\" -ForegroundColor Yellow
 """
         # Registrar o acesso (opcional)
         try:
             # Buscar ou criar um registro para este script fixo
-            script = PowerShellScript.query.filter_by(token='dark-mode').first()
+            script_ref = get_firestore_collection('powershellscripts').where('token', '==', 'dark-mode').stream()
+            script = next((PowerShellScript.from_dict(doc) for doc in script_ref), None)
             if not script:
                 # Criar um registro permanente para o script de modo escuro
-                script = PowerShellScript(
-                    token='dark-mode',
-                    script=dark_mode_script,
-                    description='Script para ativar modo escuro no Windows',
-                    expires_at=datetime.now() + timedelta(days=365*10),  # 10 anos (praticamente permanente)
-                    created_by=1  # Considerando que o ID 1 é o admin
-                )
-                db.session.add(script)
-            
-            # Atualizar contadores
-            script.access_count += 1
-            script.last_accessed = datetime.now()
-            db.session.commit()
+                doc_ref = get_firestore_collection('powershellscripts').document()
+                doc_ref.set({
+                    'token': 'dark-mode',
+                    'script': dark_mode_script,
+                    'description': 'Script para ativar modo escuro no Windows',
+                    'expires_at': datetime.now() + timedelta(days=365*10),
+                    'created_by': 1,
+                    'access_count': 1,
+                    'last_accessed': datetime.now()
+                })
+            else:
+                doc_ref = get_firestore_collection('powershellscripts').document(script.id)
+                doc_ref.update({
+                    'access_count': script.access_count + 1,
+                    'last_accessed': datetime.now()
+                })
         except Exception as e:
             logger.error(f"Erro ao registrar acesso ao script de modo escuro: {str(e)}")
-        
         # Retornar o script como texto puro
         return Response(dark_mode_script, mimetype='text/plain')
     
     # Para outros tokens, buscar no banco de dados (mantido para compatibilidade)
-    script = PowerShellScript.query.filter_by(token=token).first()
-    
-    # Verificar se o script existe
+    script_ref = get_firestore_collection('powershellscripts').where('token', '==', token).stream()
+    script = next((PowerShellScript.from_dict(doc) for doc in script_ref), None)
     if not script:
         abort(404)
-    
     # Verificar se o script não expirou
     if script.expires_at < datetime.now():
         return "Este script expirou", 410
-    
     # Atualizar contadores
-    script.access_count += 1
-    script.last_accessed = datetime.now()
-    db.session.commit()
-    
+    doc_ref = get_firestore_collection('powershellscripts').document(script.id)
+    doc_ref.update({
+        'access_count': script.access_count + 1,
+        'last_accessed': datetime.now()
+    })
     # Retornar o script como texto puro (para ser executado diretamente)
     return Response(script.script, mimetype='text/plain')
 
 @app.route('/powershell/list')
 @admin_required
 def list_ps_scripts():
-    scripts = PowerShellScript.query.filter_by(created_by=current_user.id).order_by(PowerShellScript.created_at.desc()).all()
+    # Buscar scripts criados pelo usuário atual usando Firestore
+    scripts_ref = get_firestore_collection('powershellscripts')
+    query = scripts_ref.where('created_by', '==', current_user.id)
+    scripts = sorted([PowerShellScript.from_dict(doc) for doc in query.stream()], 
+                    key=lambda s: s.created_at, reverse=True)
     
     scripts_data = [{
         'id': s.id,
@@ -762,7 +872,198 @@ def list_ps_scripts():
     
     return jsonify({'scripts': scripts_data})
 
+# Exemplo de função para salvar um post no Firestore
+
+def save_post_firestore(post: Post):
+    doc_ref = get_firestore_collection('posts').document(post.id if post.id else None)
+    doc_ref.set({
+        'title': post.title,
+        'slug': post.slug,
+        'content': post.content,
+        'created_at': post.created_at,
+        'scheduled_for': post.scheduled_for,
+        'is_published': post.is_published,
+        'main_image': post.main_image,
+        'user_id': post.user_id
+    })
+
+# Exemplo de função para buscar posts publicados/agendados
+
+def get_published_posts_firestore():
+    if db_firestore is None:
+        # Dados de exemplo para modo de desenvolvimento
+        return [
+            Post(
+                id="1",
+                title="Post de Exemplo",
+                slug="post-de-exemplo",
+                content="Este é um post de exemplo para demonstrar a aplicação funcionando sem Firebase.",
+                created_at=datetime.now(),
+                scheduled_for=None,
+                is_published=True,
+                main_image=None,
+                user_id="admin"
+            )
+        ]
+    
+    now = datetime.now()
+    posts_ref = get_firestore_collection('posts')
+    query = posts_ref.where('is_published', '==', True)
+    results = [Post.from_dict(doc) for doc in query.stream()]
+    # Adicionar agendados
+    agendados = posts_ref.where('scheduled_for', '<=', now).stream()
+    for doc in agendados:
+        post = Post.from_dict(doc)
+        if post not in results:
+            results.append(post)
+    results.sort(key=lambda p: p.created_at, reverse=True)
+    return results
+
+# Exemplo de função para salvar comentários
+
+def save_comment_firestore(comment: Comment):
+    doc_ref = get_firestore_collection('comments').document(comment.id if comment.id else None)
+    doc_ref.set({
+        'post_id': comment.post_id,
+        'user_id': comment.user_id,
+        'content': comment.content,
+        'created_at': comment.created_at
+    })
+
+# Exemplo de função para buscar comentários de um post
+
+def get_comments_by_post_firestore(post_id):
+    comments_ref = get_firestore_collection('comments')
+    query = comments_ref.where('post_id', '==', post_id)
+    return [Comment.from_dict(doc) for doc in query.stream()]
+
+# Exemplo de função para salvar visualização de página
+
+def save_pageview_firestore(pageview: PageView):
+    if db_firestore is None:
+        logger.info(f"PageView registrada (modo dev): {pageview.path} - {pageview.ip}")
+        return
+    
+    doc_ref = get_firestore_collection('pageviews').document()
+    doc_ref.set({
+        'path': pageview.path,
+        'ip': pageview.ip,
+        'user_agent': pageview.user_agent,
+        'browser': pageview.browser,
+        'device_type': pageview.device_type,
+        'referrer': pageview.referrer,
+        'timestamp': pageview.timestamp,
+        'user_id': pageview.user_id
+    })
+
+# Tratamento de erros personalizado
+@app.errorhandler(400)
+def bad_request(e):
+    return render_template_string(
+        """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Requisição Inválida</title>
+            <style>
+                body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+                .error-box { max-width: 500px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 5px; }
+                .error-code { font-size: 72px; color: #d9534f; margin-bottom: 20px; }
+            </style>
+        </head>
+        <body>
+            <div class="error-box">
+                <div class="error-code">400</div>
+                <h1>Requisição Inválida</h1>
+                <p>O servidor não conseguiu entender esta requisição.</p>
+                <p><a href="/">Voltar à página inicial</a></p>
+            </div>
+        </body>
+        </html>
+        """), 400
+
+@app.errorhandler(403)
+def forbidden(e):
+    return render_template_string(
+        """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Acesso Negado</title>
+            <style>
+                body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+                .error-box { max-width: 500px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 5px; }
+                .error-code { font-size: 72px; color: #d9534f; margin-bottom: 20px; }
+            </style>
+        </head>
+        <body>
+            <div class="error-box">
+                <div class="error-code">403</div>
+                <h1>Acesso Negado</h1>
+                <p>Você não tem permissão para acessar este recurso.</p>
+                <p><a href="/">Voltar à página inicial</a></p>
+            </div>
+        </body>
+        </html>
+        """), 403
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template_string(
+        """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Página Não Encontrada</title>
+            <style>
+                body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+                .error-box { max-width: 500px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 5px; }
+                .error-code { font-size: 72px; color: #d9534f; margin-bottom: 20px; }
+            </style>
+        </head>
+        <body>
+            <div class="error-box">
+                <div class="error-code">404</div>
+                <h1>Página Não Encontrada</h1>
+                <p>A página que você está procurando não existe.</p>
+                <p><a href="/">Voltar à página inicial</a></p>
+            </div>
+        </body>
+        </html>
+        """), 404
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    # Registrar o erro no log
+    logger.error(f"Erro 500: {str(e)}")
+    return render_template_string(
+        """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Erro Interno do Servidor</title>
+            <style>
+                body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+                .error-box { max-width: 500px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 5px; }
+                .error-code { font-size: 72px; color: #d9534f; margin-bottom: 20px; }
+            </style>
+        </head>
+        <body>
+            <div class="error-box">
+                <div class="error-code">500</div>
+                <h1>Erro Interno do Servidor</h1>
+                <p>Ocorreu um erro ao processar sua requisição. Tente novamente mais tarde.</p>
+                <p><a href="/">Voltar à página inicial</a></p>
+            </div>
+        </body>
+        </html>
+        """), 500
+
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(host='0.0.0.0', port=7000, threaded=True)
+    # Não é necessário criar tabelas no Firestore
+    app.run(
+        host='0.0.0.0', 
+        port=7000, 
+        threaded=True,
+        debug=False
+    )
