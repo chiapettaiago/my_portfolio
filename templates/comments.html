@@ -1,7 +1,7 @@
 {% if current_user.is_authenticated %}
 <div class="comment-form mb-4">
     <h4>Adicionar Comentário</h4>
-    <form action="{{ url_for('add_comment', post_id=post.id) }}" method="POST">
+    <form action="{{ url_for('add_comment', slug=post.slug) }}" method="POST">
         <div class="form-group">
             <textarea name="content" class="form-control" rows="3" required></textarea>
         </div>
@@ -25,4 +25,4 @@
     {% else %}
         <p class="text-muted">Nenhum comentário ainda. Seja o primeiro a comentar!</p>
     {% endif %}
-</div> 
+</div>
