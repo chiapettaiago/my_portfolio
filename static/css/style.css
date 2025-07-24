@@ -567,3 +567,256 @@ footer a:hover,
     fill: #fff !important;
 }
 
+/* Estilos do Painel de Administração */
+#admin-panel {
+    background: var(--gradient-bg);
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+    min-height: 100vh;
+}
+
+#admin-panel h1 {
+    color: #fff;
+    margin-bottom: 2rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.admin-card {
+    transition: transform 0.3s, box-shadow 0.3s;
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.admin-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+}
+
+.admin-card .card-body {
+    padding: 2rem;
+}
+
+.admin-card i {
+    margin-bottom: 1.5rem;
+}
+
+.admin-card .btn {
+    border-radius: 50px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+    margin-top: 1rem;
+}
+
+#admin-panel .card-header {
+    padding: 1rem;
+}
+
+#admin-panel .display-4 {
+    font-size: 3rem;
+    margin-bottom: 0;
+}
+
+.welcome-header {
+    margin-bottom: 2rem;
+}
+
+.welcome-header .display-4 {
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.welcome-header .lead {
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+}
+
+.dashboard-card {
+    border-radius: 10px;
+    overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(45deg, #4e73df 0%, #224abe 100%);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(45deg, #1cc88a 0%, #13855c 100%);
+}
+
+.bg-gradient-info {
+    background: linear-gradient(45deg, #36b9cc 0%, #258391 100%);
+}
+
+.bg-gradient-warning {
+    background: linear-gradient(45deg, #f6c23e 0%, #dda20a 100%);
+}
+
+#admin-panel .card-header {
+    font-weight: 600;
+    padding: 1rem;
+}
+
+#admin-panel .list-group-item {
+    transition: background-color 0.2s;
+    border-left: none;
+    border-right: none;
+}
+
+#admin-panel .list-group-item:hover {
+    background-color: rgba(0,123,255,0.05);
+}
+
+#admin-panel h2 {
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+}
+
+/* Estilos específicos para o conteúdo do post */
+.post-content {
+    color: var(--text-light);
+}
+
+.post-content h1, 
+.post-content h2, 
+.post-content h3, 
+.post-content h4, 
+.post-content h5, 
+.post-content h6,
+.post-content p,
+.post-content li,
+.post-content span,
+.post-content div {
+    color: var(--text-light) !important;
+}
+
+/* Estilo específico para texto roxo no post para garantir visibilidade */
+.post-content span[style*="color: purple"],
+.post-content span[style*="color: #800080"],
+.post-content span[style*="color: rgb(128, 0, 128)"],
+.post-content span[style*="color: rgba(128, 0, 128"],
+.post-content font[color="purple"],
+.post-content *[style*="color: purple"] {
+    color: #d9a9ff !important; /* Roxo mais claro para melhor contraste */
+    background-color: rgba(0, 0, 0, 0.2); /* Fundo sutil para melhorar a legibilidade */
+    padding: 0 2px;
+    border-radius: 3px;
+}
+
+.post-content a {
+    color: #00c3ff !important; /* Cor de destaque para links */
+    text-decoration: underline;
+    font-weight: 500;
+}
+
+.post-content a:hover {
+    color: #66dbff !important;
+    text-decoration: none;
+}
+
+/* Estilo para blocos de código nos posts */
+.post-content pre,
+.post-content code {
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    padding: 10px;
+    color: #f8f9fa !important;
+    font-family: 'Courier New', Courier, monospace;
+    overflow-x: auto;
+    border-left: 3px solid var(--primary-color);
+    margin: 15px 0;
+}
+
+.post-content code {
+    padding: 2px 5px;
+    display: inline-block;
+}
+
+/* Estilo para cabeçalhos nos posts */
+.post-content h1,
+.post-content h2,
+.post-content h3,
+.post-content h4,
+.post-content h5,
+.post-content h6 {
+    color: #ffffff !important;
+    margin-top: 25px;
+    margin-bottom: 15px;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 10px;
+}
+
+.post-content h1 { font-size: 2rem; }
+.post-content h2 { font-size: 1.8rem; }
+.post-content h3 { font-size: 1.6rem; }
+.post-content h4 { font-size: 1.4rem; }
+.post-content h5 { font-size: 1.2rem; }
+.post-content h6 { font-size: 1rem; }
+
+/* Estilos para listas */
+.post-content ul,
+.post-content ol {
+    padding-left: 20px;
+    margin-bottom: 20px;
+}
+
+.post-content ul li,
+.post-content ol li {
+    margin-bottom: 8px;
+}
+
+/* Estilos para imagens */
+.post-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    margin: 15px 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Estilos para tabelas */
+.post-content table {
+    width: 100%;
+    margin-bottom: 20px;
+    border-collapse: collapse;
+}
+
+.post-content table th,
+.post-content table td {
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff !important;
+}
+
+.post-content table th {
+    background-color: rgba(106, 17, 203, 0.3);
+    font-weight: 600;
+}
+
+.post-content table tr:nth-child(odd) td {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Ajuste para citações alinhadas */
+.post-content blockquote {
+    border-left: 4px solid var(--primary-color);
+    padding: 10px 20px;
+    margin: 20px 0; /* alinhado com o texto */
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    font-style: italic;
+    /* remove indentação lateral */
+    margin-left: 0;
+    margin-right: 0;
+}
+
+/* Correção para elementos específicos com cores definidas inline */
+.post-content *[style*="color"] {
+    color: var(--text-light) !important;
+}
+
